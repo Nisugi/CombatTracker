@@ -1,0 +1,651 @@
+=begin
+  CombatTracker.lic
+    Database based combat event tracking. This is the "recorder", it creates a relational database 
+    that tags creatures to hunting sessions, attacks to creatures, and flares to attacks.
+    
+    The end goal is an data tracking system that can be used to create various reports such as:
+    What happened to creature #8282851?
+    How many creatures did I murder last hunt?
+    What's the average damage of my briar flares?
+      and many more...
+
+
+        author: Nisugi
+  contributors: Nisugi
+          game: Gemstone
+          tags: hunting, combat, tracking
+       version: 0.1
+
+  Change Log:
+  v0.1
+    - Alpha release
+=end
+
+require 'sequel'
+
+module CombatTracker
+  # ------------------------------------------------------------
+  # Configuration
+  # ------------------------------------------------------------
+  module Config
+    class << self
+      attr_accessor :session_timeout, :flush_interval, :max_cache_rows, :db_path
+    end
+
+    self.session_timeout = 180      # seconds of inactivity before a new session
+    self.flush_interval  = 300      # seconds between background DB flushes
+    self.max_cache_rows  = 10_000   # early‑flush threshold
+    self.db_path         = File.join(DATA_DIR, XMLData.game, Char.name, 'combat.db')
+  end
+
+  # ------------------------------------------------------------
+  # Debug messaging
+  # ------------------------------------------------------------
+  module Log
+    LEVELS = %i[VERBOSE DEBUG INFO WARN ERROR].freeze
+    @level = :INFO
+
+    class << self
+      # ensure we're always reading the same @level
+      def level
+        @level
+      end
+
+      # normalize input to lowercase symbol and store it
+      def level=(lvl)
+        if LEVELS.include?(lvl)
+          @level = lvl
+        else
+          warn "[CB WARN ] Unknown log level #{lvl.inspect}; keeping #{@level}"
+        end
+      end
+
+      def log(level, ctx, msg)
+        return if LEVELS.index(level) < LEVELS.index(@level)
+        timestamp = Time.now.strftime('%H:%M:%S')
+        puts "[#{timestamp}] [CB #{level.to_s.upcase.ljust(5)}] [#{ctx}] #{msg}"
+      end
+    end
+  end
+
+  # ------------------------------------------------------------
+  # Database connection & schema bootstrap
+  # ------------------------------------------------------------
+  module DB
+    extend self
+
+    def conn
+      @conn ||= Sequel.sqlite(
+        Config.db_path,
+        timeout:      10_000,
+        journal_mode: :wal,
+        synchronous:  :normal
+      )
+    end
+
+    def load_schema!
+      path = File.expand_path('db_schema.sql', DATA_DIR)
+      return unless conn.tables.empty?
+      conn.run(File.read(path))
+      Log.log(:info, :DB, "Schema initialized -> #{path}")
+      conn.run 'PRAGMA foreign_keys = ON'
+    end
+  end
+  DB.load_schema!
+
+  # ------------------------------------------------------------
+  # Seed lookup tables from parser definitions
+  # ------------------------------------------------------------
+  module DBSeeder
+    def self.seed!
+      conn = DB.conn
+
+      # 1) Resolution types
+      Parser::RESOLUTION_DEFS.each_with_index do |res_def|
+        conn[:resolution_types]
+          .insert_conflict(target: :name, do_nothing: true)
+          .insert(name: res_def.type.to_s.upcase)
+      end
+
+      # 2) Status types
+      Parser::STATUS_DEFS.each_with_index do |st_def|
+        conn[:status_types]
+          .insert_conflict(target: :name, do_nothing: true)
+          .insert(name: st_def.type.to_s.upcase)
+      end
+
+      # 3) Attack types
+      Parser::ATTACK_DEFS.each_with_index do |atk_def|
+        conn[:attack_types]
+          .insert_conflict(target: :name, do_nothing: true)
+          .insert(name: atk_def.name.to_s.upcase)
+      end
+
+      # 4) Flare types
+      Parser::FLARE_DEFS.each_with_index do |fl_def|
+        conn[:flare_types]
+          .insert_conflict(target: :name, do_nothing: true)
+          .insert(name: fl_def.name.to_s.upcase)
+      end
+
+      Log.log(:info, "DBSEED", "Seeded lookup tables from Parser defs")
+    end
+  end
+
+  # ------------------------------------------------------------
+  # Debug messaging for inserting to DB
+  # ------------------------------------------------------------
+  module DebugInsert
+    def self.insert(table, row)
+      Log.log(:DEBUG, "DB-INS", "-> #{table}: #{row.inspect}")
+      DB.conn[table].insert(row)
+    rescue SQLite3::ConstraintException => e
+      Log.log(:ERROR, "DB-INS", "FAILED #{table}: #{e.class}: #{e.message}")
+      # show what FK’s this table has
+      fk_defs = DB.conn["PRAGMA foreign_key_list(#{table})"].all
+      Log.log(:ERROR, "DB-INS", "FK definitions for #{table}: #{fk_defs.inspect}")
+      # show any dangling child rows
+      violations = DB.conn['PRAGMA foreign_key_check'].all
+      Log.log(:ERROR, "DB-INS", "Current FK violations: #{violations.inspect}")
+      raise
+    end
+  end
+
+  # ------------------------------------------------------------
+  # Simple Foreign Key helpers
+  # ------------------------------------------------------------
+  module Lookup
+    def self.id(table, name)
+      DB.conn[table].first(name: name.to_s.upcase)&.fetch(:id) || raise("Unknown #{table}: #{name}")
+    end
+  end
+
+  # ------------------------------------------------------------
+  # Session manager – ensures we always have an active session
+  # ------------------------------------------------------------
+  module Session
+    extend self
+
+    def current_id = ensure_session!
+    def next_sequence = ensure_session! && (@seq += 1)
+
+    private
+
+    def ensure_session!
+      now  = Time.now
+      char = defined?(Char) ? Char.name : 'Unknown'
+
+      if @id.nil? || now - (@last_seen || 0) > Config.session_timeout
+        DB.conn[:combat_sessions].where(id: @id).update(ended_at: now) if @id
+        @id  = DB.conn[:combat_sessions].insert(character_name: char, started_at: now, last_event_at: now)
+        @seq = 0
+      else
+        DB.conn[:combat_sessions].where(id: @id).update(last_event_at: now)
+      end
+
+      @last_seen = now
+      @id
+    end
+  end
+
+  # ------------------------------------------------------------
+  # Lightweight row cache + bulk flusher
+  # ------------------------------------------------------------
+  module Store
+    CACHE = Hash.new { |h, k| h[k] = [] }
+    MUTEX = Mutex.new
+
+    module_function
+
+    def push(table, row)
+      MUTEX.synchronize { CACHE[table] << row }
+      Flusher.flush! if CACHE[table].size >= Config.max_cache_rows
+    end
+  end
+
+  module Flusher
+    TABLES = %i[
+      creature_instances attack_events attack_resolutions resolution_components
+      status_events flare_events damage_components
+    ].freeze
+
+    module_function
+
+    def flush!
+      batches = nil
+      Store::MUTEX.synchronize { batches = Store::CACHE.transform_values(&:dup) }
+      return if batches.values.all?(&:empty?)
+
+      DB.conn.transaction do
+        TABLES.each do |t|
+          rows = batches[t] or next
+          rows = dedup_creatures(rows) if t == :creature_instances
+          DB.conn[t].multi_insert(rows, slice: 1_000) unless rows.empty?
+        end
+      end
+
+      Store::MUTEX.synchronize { TABLES.each { |tbl| Store::CACHE[tbl].clear } }
+    rescue => e
+      Log.log(:error, :FLUSH, "flush failed → #{e.message}")
+    end
+
+    def dedup_creatures(rows)
+      rows
+        .group_by { |r| [r[:session_id], r[:exist_id]] }
+        .values
+        .map { |grp| grp.max_by { |r| r[:last_seen_at] } }
+    end
+
+    def start_background!
+      Thread.new do
+        loop do
+          sleep Config.flush_interval
+          flush!
+        end
+      end
+    end
+  end
+  Flusher.start_background!
+
+  # ------------------------------------------------------------
+  # Parser - likely move to it's own file as it grows
+  # ------------------------------------------------------------
+  module Parser
+    # ---- helpers -------------------------------------------------------
+    TARGET_LINK = %r{<a exist="(?<id>\d+)" noun="(?<noun>[^"]+)">(?<name>[^<]+)</a>}i.freeze
+
+    def self.extract_link(text)
+      m = TARGET_LINK.match(text) or return
+      { id: m[:id].to_i, noun: m[:noun], name: m[:name] }
+    end
+
+    # ---- definitions ---------------------------------------------------
+    ResolutionDef = Struct.new(:type, :patterns)
+    StatusDef     = Struct.new(:type, :patterns)
+    AttackDef     = Struct.new(:name, :patterns)
+    FlareDef      = Struct.new(:name, :patterns, :damaging)
+
+    RESOLUTION_DEFS = [
+      ResolutionDef.new(:as_ds, [/AS: (?<AS>[\+\-\d]+) vs DS: (?<DS>[\+\-\d]+) with AvD: (?<AvD>[\+\-\d]+) \+ d\d+ roll: (?<roll>[\+\-\d]+) \= (?<result>[\+\-\d]+)/]).freeze,
+      ResolutionDef.new(:cs_td, [
+                          /CS: (?<CS>[\+\-\d]+) \- TD: (?<TD>[\+\-\d]+) \+ CvA: (?<CvA>[\+\-\d]+) \+ d\d+\: (?<roll>[\+\-\d]+) \=\= (?<result>[\+\-\d]+)/,
+                          /CS: (?<CS>[\+\-\d]+) \- TD: (?<TD>[\+\-\d]+) \+ CvA: (?<CvA>[\+\-\d]+) \+ d\d+\: (?<roll>[\+\-\d]+) \+ Bonus: (?<bonus>[\+\-\d]+) \=\= (?<result>[\+\-\d]+)/
+                        ]).freeze,
+      ResolutionDef.new(:smr, [
+                          /\[SMR Result: (?<result>\d+) \(Open d100: (?<roll>[\+\-\d]+), Bonus: (?<bonus>[\-\+\d]+)\)\]/,
+                          /\[SMR Result: (?<result>\d+) \(Open d100: (?<roll>[\+\-\d]+)\)\]/
+                        ]).freeze
+    ].freeze
+
+    STATUS_DEFS = [
+      StatusDef.new(:stunned, [/The (?<target>.+?) is stunned!/].freeze),
+      StatusDef.new(:prone, [/It is knocked to the ground!/].freeze),
+      StatusDef.new(:immobilized, [/(?<target>.+?) form is entangled in an unseen force that restricts .+? movement\./].freeze),
+      StatusDef.new(:blind, [/You blinded (?<target>[^!]+)!/].freeze)
+    ].freeze
+
+    ATTACK_DEFS = [
+      AttackDef.new(:attack, [/You(?: take aim and)? swing .+? at (?<target>[^!]+)!/].freeze),
+      AttackDef.new(:barrage, [/Nocking another arrow to your bowstring, you swiftly draw back and loose again!/].freeze),
+      AttackDef.new(:companion, [
+        /(?<companion>.+?) pounces on (?<target>[^,]+), knocking the .+? painfully to the ground!/,
+        /The (?<companion>.+?) takes the opportunity to slash .+? claws at the (?<target>.+?) \w+!/,
+        /(?<companion>.+?) charges forward and slashes .+? claws at (?<target>.+?) faster than .+? can react!/
+      ].freeze),
+      AttackDef.new(:fire, [/You(?: take aim and)? fire .+? at (?<target>[^!]+)!/].freeze),
+      AttackDef.new(:flurry, [
+        /Flowing with deadly grace, you smoothly reverse the direction of your blades and slash again!/,
+        /With fluid motion, you guide your flashing blades, slicing toward (?<target>.+?) at the apex of their deadly arc!/
+      ].freeze),
+      AttackDef.new(:jab, [/You(?: make a precise)? attempt to jab (?<target>[^!]+)!/].freeze),
+      AttackDef.new(:punch, [/You(?: make a precise)? attempt to punch (?<target>[^!]+)!/].freeze),
+      AttackDef.new(:kick, [/You(?: make a precise)? attempt to kick (?<target>[^!]+)!/].freeze),
+      AttackDef.new(:grapple, [/You(?: make a precise)? attempt to grapple (?<target>[^!]+)!/].freeze),
+      AttackDef.new(:twinhammer, [/You raise your hands high, lace them together and bring them crashing down towards (?<target>[^!]+)!/].freeze),
+      AttackDef.new(:cripple, [/You reverse your grip on your .+? and dart toward (?<target>.+?) at an angle!/].freeze),
+      AttackDef.new(:wblade, [
+        /You turn, blade spinning in your hand toward (?<target>[^!]+)!/,
+        /You angle your blade at (?<target>.+?) in a crosswise slash!/,
+        /In a fluid whirl, you sweep your blade at (?<target>[^!]+)!/,
+        /Your blade licks out at (?<target>.+?) in a blurred arc!/
+      ].freeze),
+      AttackDef.new(:natures_fury, [/The surroundings advance upon (?<target>.+?) with relentless fury!/].freeze),
+      AttackDef.new(:spikethorn, [/Dozens of long thorns suddenly grow out from the ground underneath (?<target>[^!]+)!/].freeze),
+      AttackDef.new(:sunburst, [/The dazzling solar blaze flashes before (?<target>[^!]+)!/].freeze),
+      AttackDef.new(:tangleweed, [
+        /The (?<weed>.+?) lashes out violently at (?<target>[^,]+), dragging .+? to the ground!/,
+        /The (?<weed>.+?) lashes out at (?<target>[^,]+), wraps itself around .+? body and entangles .+? on the ground\./
+      ].freeze),
+      AttackDef.new(:volley, [
+        /An arrow finds its mark!  (?<target>.+?) is hit!/,
+        /An arrow pierces (?<target>[^!]+)!/,
+        /An arrow skewers (?<target>[^!]+)!/,
+        /(?<target>.+?) is struck by a falling arrow!/,
+        /(?<target>.+?) is transfixed by an arrow's descent!/
+      ].freeze)
+    ].freeze
+
+    FLARE_DEFS = [
+      FlareDef.new(:acid, [
+        /\*\* Your .+? releases? a spray of acid! \*\*/,
+        /\*\* Your .+? releases? a spray of acid at (?<target>.+?)! \*\*/
+      ].freeze, true),
+      FlareDef.new(:acuity, [/Your .+? glows intensely with a verdant light!/].freeze, false),
+      FlareDef.new(:air, [/\*\* Your .+? unleashes a blast of air! \*\*/].freeze, true),
+      FlareDef.new(:arcane_reflex, [/Vital energy infuses you, hastening your arcane reflexes!/].freeze, false),
+      FlareDef.new(:blink, [/Your .+? suddenly lights up with hundreds of tiny blue sparks!/].freeze, false),
+      FlareDef.new(:blessings_flourish, [
+        /\*\* A crackling wave arcs across your body, striking (?<target>.+?) with lightning speed!  A spiritual resonance warms your core, lending you renewed strength! \*\*/,
+        /\*\* Shimmering arcs of lightning stream from your hands, colliding with (?<target>.+?) in a rapid burst!  A stirring force ignites within you, augmenting your spirit! \*\*/,
+        /\*\* Sparkling tendrils of energy weave around your limbs, shocking (?<target>.+?) in a bright flare!  The pulse leaves you feeling spiritually emboldened! \*\*/,
+        /\*\* A faint hum courses through you as arcs of electricity coil around your arms, jolting (?<target>.+?) in a vivid burst!  The current resonates with your spirit, boosting your energy! \*\*/,
+        /\*\* You feel a tingling surge channel through your arms, blasting (?<target>.+?) with crackling electricity!  A reassuring feeling of mental acuity settles over you! \*\*/,
+        /\*\* Jagged sparks dance along your open palms, lashing out at (?<target>.+?) in a crackling surge!  Your resolve feels bolstered as the energy courses through you! \*\*/,
+        /\*\* An electrified aura coalesces around you, crackling outward to shock (?<target>[^!]+)!  The charge resonates with your spirit, heightening your prowess! \*\*/,
+        /\*\* Threads of charged light spiral around your arms, striking (?<target>.+?) with a pulsing shock!  A resonant force ripples through you, amplifying your spirit! \*\*/,
+        /\*\* Sparks of crackling energy race along your fingertips, shocking (?<target>.+?) with a brilliant flash!  A surge of spiritual power rushes through your veins! \*\*/,
+        /\*\* A crackling wave arcs across your body, striking (?<target>.+?) with lightning speed!  A spiritual resonance warms your core, lending you renewed strength! \*\*/
+      ].freeze, true),
+      FlareDef.new(:breeze, [
+        /(?<target>.+?) is buffeted by a burst of wind and pushed back!/,
+        /(?<target>.+?) is buffeted by a sudden gust of wind!/,
+        /A gust of wind shoves (?<target>.+?) back!/
+      ].freeze, false),
+      FlareDef.new(:briar, [/Vines of vicious briars whip out from your [^,]+, raking the \w+ with its thorns\.  The \w+ looks slightly ill as the glistening emerald coating from each briar works itself under its skin\./].freeze, true),
+      FlareDef.new(:chameleon_shroud, [/A tenebrous shroud stitches itself into existence around you as you gracefully retreat into the shadows!/].freeze, false),
+      FlareDef.new(:cold, [/Your .+? glows intensely with a cold blue light!/].freeze, true),
+      FlareDef.new(:cold_gef, [/\*\* A vortex of razor-sharp ice gusts from .+? and coalesces around (?<target>[^!]+)! \*\*/].freeze, true),
+      FlareDef.new(:concussive_blows, [/\*\* Your blow slams the (?<target>.+?) with concussive force! \*\*/].freeze, true),
+      FlareDef.new(:disintegration, [/\*\* Your .+? releases a shimmering beam of disintegration! \*\*/].freeze, true),
+      FlareDef.new(:disruption, [/\*\* Your .+? releases a quivering wave of disruption! \*\*/].freeze, true),
+      FlareDef.new(:earth_gef, [/\*\* A violent explosion of frenetic energy rumbles from .+? and pummels (?<target>[^!]+)! \*\*/].freeze, true),
+      FlareDef.new(:energy, [/\*\* A beam of .+? energy emits from the tip of your .+? and collides with (?<target>.+?\<\/a\>) .+?! \*\*/].freeze, true),
+      FlareDef.new(:ensorcell, [/\*\* Necrotic energy from your .+? overflows into you! \*\*/].freeze, false),
+      FlareDef.new(:fire, [/\*\* Your .+? flares with a burst of flame! \*\*/].freeze, true),
+      FlareDef.new(:fire_gef, [/\*\* Burning orbs of pure flame burst from .+? and engulf (?<target>[^!]+)! \*\*/].freeze, true),
+      FlareDef.new(:firewheel, [/\*\* Your .+? emits a fist-sized ball of lightning-suffused flames! \*\*/].freeze, true),
+      FlareDef.new(:ghezyte, [/\*\* Cords of plasma-veined grey mist seep from your .+? and entangle (?<target>[^,]+), causing .+? to tremble violently! \*\*/].freeze, false),
+      FlareDef.new(:grapple, [/\*\* Your .+? releases a twisted tendril of force! \*\*/].freeze, true),
+      FlareDef.new(:guiding_light, [/\*\* Your .+? sprays with a burst of plasma energy! \*\*/].freeze, true),
+      FlareDef.new(:impact, [/\*\* Your .+? release a blast of vibrating energy at the (?<target>[^!]+)! \*\*/].freeze, true),
+      FlareDef.new(:lightning, [/\*\* Your .+? emits a searing bolt of lightning! \*\*/].freeze, true),
+      FlareDef.new(:lightning_gef, [/\*\* A vicious torrent of crackling lightning surges from .+? and strikes (?<target>[^!]+)! \*\*/].freeze, true),
+      FlareDef.new(:magma, [/\*\* Your .+? expel a glob of molten magma at the (?<target>[^!]+)! \*\*/].freeze, true),
+      FlareDef.new(:mana, [/You feel \d+ mana surge into you!/].freeze, false),
+      FlareDef.new(:natures_decay, [
+        /Soot brown specks of leaf mold trail in the wake of (?<target>.+?) movements, distorted by a murky haze\./,
+        /The earthy, sweet aroma clinging to (?<target>.+?) grows more pervasive\./,
+        /An earthy, sweet armoa clings to (?<target>.+?) in a murky haze\./,
+        /An earthy, sweet aroma clings to (?<target>.+?) in a murky haze, accompanied by soot brown specks of leaf mold\./,
+      ].freeze, false),
+      FlareDef.new(:physical_prowess, [/The vitality of nature bestows you with a burst of strength!/].freeze, false),
+      FlareDef.new(:plasma, [/\*\* Your .+? pulses with a burst of plasma energy! \*\*/].freeze, true),
+      FlareDef.new(:psychic_assault, [/\*\* Your .+? unleashes a blast of psychic energy at the (?<target>[^!]+)! \*\*/].freeze, true),
+      FlareDef.new(:rusalkan, [/Succumbing to the force of the tidal wave, (?<target>.+?) is thrown to the ground\./].freeze, false),
+      FlareDef.new(:somnis, [/\*\* For a split second, the striations of your .+? expand into a sinuous pearlescent mist that rushes towards the (?<target>[^,]+), enveloping .+? entirely and causing .+? to collapse, fast asleep! \*\*/].freeze, false),
+      FlareDef.new(:sprite, [/\*\* The .+? sprite on your shoulder sends forth a cylindrical, .+? blast of magic at (?<target>.+?\<\/a\>) .+?! \*\*/].freeze, true),
+      FlareDef.new(:steam, [
+        /\*\* Your .+? erupts with a plume of steam! \*\*/,
+        /\*\* Your .+? erupt with a plume of steam at the (?<target>[^!]+)! \*\*/
+      ].freeze, true),
+      FlareDef.new(:tailwind, [
+        /A favorable tailwind springs up behind you\./,
+        /You shift position, taking advantage of a favorable tailwind\./,
+        /The wind turns in your favor\./
+      ].freeze, false),
+      FlareDef.new(:terror, [/\*\* A wave of wicked power surges forth from your .+? and fills (?<target>.+?) with terror, .+? form trembling with unmitigated fear! \*\*/].freeze, false),
+      FlareDef.new(:unbalance, [/\*\* Your .+? unleashes an invisible burst of force! \*\*/].freeze, true),
+      FlareDef.new(:vacuum, [/\*\* As you hit, the edge of your .+? seems to fold inward upon itself drawing everything it touches along with it! \*\*/].freeze, true),
+      FlareDef.new(:water, [/\*\* Your .+? shoot a blast of water! \*\*/].freeze, true),
+    ].freeze
+
+    # build lookup tables only once
+    RESOLUTION_LOOKUP = RESOLUTION_DEFS.flat_map { |d| d.patterns.map { |rx| [rx, d.type] } }.freeze
+    STATUS_LOOKUP     = STATUS_DEFS.flat_map     { |d| d.patterns.map { |rx| [rx, d.type] } }.freeze
+    ATTACK_LOOKUP     = ATTACK_DEFS.flat_map     { |d| d.patterns.map { |rx| [rx, d.name] } }.freeze
+    FLARE_LOOKUP      = FLARE_DEFS.flat_map      { |d| d.patterns.map { |rx| [rx, d.name, d.damaging] } }.freeze
+
+    RESOLUTION_DETECTOR = Regexp.union(RESOLUTION_LOOKUP.map(&:first)).freeze
+    STATUS_DETECTOR     = Regexp.union(STATUS_LOOKUP.map(&:first)).freeze
+    ATTACK_DETECTOR     = Regexp.union(ATTACK_LOOKUP.map(&:first)).freeze
+    FLARE_DETECTOR      = Regexp.union(FLARE_LOOKUP.map(&:first)).freeze
+
+    module_function
+
+    def parse_attack(line)
+      return unless ATTACK_DETECTOR.match?(line)
+      ATTACK_LOOKUP.each do |rx, name|
+        if (m = rx.match(line))
+          info = { name: name, raw: line.strip }
+          if m.names.include?('target')
+            raw_t        = m[:target]
+            info[:target] = extract_link(raw_t) || { id: nil, noun: nil, name: raw_t }
+          end
+          return info
+        end
+      end
+    end
+
+    def parse_resolution(line)
+      return unless RESOLUTION_DETECTOR.match?(line)
+      RESOLUTION_LOOKUP.each do |rx, type|
+        return { type:, data: rx.match(line).named_captures.transform_keys(&:to_sym) } if rx.match?(line)
+      end
+    end
+
+    def parse_flare(line)
+      return unless FLARE_DETECTOR.match?(line)
+      FLARE_LOOKUP.each do |rx, name, damaging|
+        if (m = rx.match(line))
+          info = { name:, damaging:, raw: line.strip }
+          if m.names.include?('target')
+            info[:target] = extract_link(m[:target]) || { id: nil, noun: nil, name: m[:target] }
+          end
+          return info
+        end
+      end
+    end
+
+    def parse_status(line)
+      return unless STATUS_DETECTOR.match?(line)
+      STATUS_LOOKUP.each { |rx, type| return type if rx.match?(line) }
+    end
+  end
+  CombatTracker::DBSeeder.seed!
+
+  # ------------------------------------------------------------
+  # Processor – turns a buffered chunk into persisted records
+  # ------------------------------------------------------------
+  module Processor
+    module_function
+
+    def process(chunk)
+      events = parse_events(chunk)
+      return if events.empty?
+
+      DB.conn.transaction { events.each { |ev| persist(ev) } }
+    end
+
+    # -- parse ---------------------------------------------------
+    def parse_events(lines)
+      events = []
+      current = nil
+
+      lines.each do |ln|
+        if (a = Parser.parse_attack(ln))
+          events << current if current
+          current = init_event(a)
+        elsif current && (r = Parser.parse_resolution(ln))
+          current[:resolution] = r
+        elsif current && (s = Parser.parse_status(ln))
+          current[:statuses] << s
+        elsif current && (f = Parser.parse_flare(ln))
+          current[:flares]    << f.merge(damage: 0, crit: nil)
+          current[:ctx] = :flare
+        elsif current && ln =~ /\.\.\. and hit for (?<d>\d+) points? of damage!/i
+          current[:damage] += Regexp.last_match[:d].to_i
+          current[:ctx]     = :attack
+        elsif current && ln =~ /\.\.\. (?<d>\d+) points of damage!/i
+          dmg = Regexp.last_match[:d].to_i
+          (current[:ctx] == :flare ? current[:flares].last : current)[:damage] += dmg
+        elsif current && (c = CritRanks.parse(ln).values.first)
+          target = current[:ctx] == :flare ? current[:flares].last : current
+          target[:crit] = { type: c[:type], location: c[:location], rank: c[:rank], raw: ln.strip }
+        end
+      end
+      events << current if current
+      events
+    end
+
+    def init_event(attack_info)
+      {
+        name: attack_info[:name],
+        target: attack_info[:target] || {},
+        resolution: nil,
+        damage: 0,
+        crit: { type: nil, location: nil, rank: nil, raw: nil },
+        statuses: [],
+        flares: [],
+        ctx: :attack
+      }
+    end
+
+    # -- persist -------------------------------------------------
+    def persist(ev)
+      session_id = Session.current_id
+      seq        = Session.next_sequence
+      tgt        = ev[:target]
+      ci_id      = upsert_creature(session_id, tgt) if tgt[:id]
+
+      attack_id = CombatTracker::DebugInsert.insert(:attack_events, {
+        session_id:           session_id,
+        creature_instance_id: ci_id,
+        sequence:             seq,
+        target_exist_id:      tgt[:id],
+        target_noun:          tgt[:noun],
+        target_name:          tgt[:name],
+        attack_name:          ev[:name].to_s,
+        attack_damage:        ev[:damage],
+        attack_crit_type:     ev.dig(:crit, :type),
+        attack_crit_location: ev.dig(:crit, :location),
+        attack_crit_rank:     ev.dig(:crit, :rank),
+        occurred_at:          Time.now
+      })
+
+      persist_statuses(ev[:statuses], attack_id)
+      persist_resolution(ev[:resolution], attack_id, seq) if ev[:resolution]
+      persist_flares(ev[:flares], attack_id, seq, tgt)    if ev[:flares].any?
+    end
+
+    def upsert_creature(session_id, tgt)
+      now = Time.now
+      Log.log(:DEBUG, "CREATURE", "upsert_creature session_id=#{session_id.inspect}, exist_id=#{tgt[:id]}")
+      exists = DB.conn[:combat_sessions].where(id: session_id).count.positive?
+      Log.log(:DEBUG, "CREATURE", "  combat_sessions[#{session_id}] exists? #{exists}")
+      DB.conn[:creature_instances]
+        .insert_conflict(target: %i[session_id exist_id], update: { last_seen_at: now })
+        .insert(session_id: session_id, exist_id: tgt[:id], noun: tgt[:noun],
+                display_name: tgt[:name], first_seen_at: now, last_seen_at: now)
+      DB.conn[:creature_instances].where(session_id:, exist_id: tgt[:id]).get(:id)
+    end
+
+    def persist_statuses(sts, atk_id)
+      now = Time.now
+      sts.each do |st|
+        DB.conn[:status_events].insert(
+          applied_by_attack: atk_id,
+          status_type:       Lookup.id(:status_types, st),
+          started_at:        now,
+          ended_at:          nil
+        )
+      end
+    end
+
+    def persist_resolution(res, atk_id, seq)
+      session_id = Session.current_id
+      type_id    = Lookup.id(:resolution_types, res[:type])
+
+      # build the full row with all NOT NULL fields
+      row = {
+        session_id:      session_id,
+        attack_id:       atk_id,
+        sequence:        seq,
+        resolution_type: type_id,
+        result_total:    res[:data][:total].to_i,
+        d100_roll:       res[:data][:roll].to_i,
+        raw_line:        res[:raw]
+      }
+
+      # insert and grab its PK
+      res_id = DB.conn[:attack_resolutions].insert(row)
+
+      # now persist the components as before
+      res[:data].each do |k, v|
+        next if %i[total roll].include?(k)
+        DB.conn[:resolution_components].insert(
+          session_id:      session_id,
+          sequence:        seq,
+          resolution_id:   res_id,
+          component_name:  k.to_s.upcase,
+          component_value: v.to_i
+        )
+      end
+    end
+
+    def persist_flares(flares, atk_id, seq, tgt)
+      flares.each_with_index do |fl, i|
+        row = {
+          session_id:      Session.current_id,
+          attack_id:       atk_id,
+          attack_sequence: seq,
+          flare_sequence:  i + 1,
+          flare_name:      fl[:name].to_s,                    # ← was missing
+          flare_type:      Lookup.id(:flare_types, fl[:name]),
+          target_exist_id: tgt[:id],
+          target_noun:     tgt[:noun],
+          target_name:     tgt[:name],
+          raw_line:        fl[:raw],                          # ← usually NOT NULL
+        }
+
+        if fl[:damaging]
+          row[:damage]        = fl[:damage]
+          row[:location_id]   = Lookup.id(:locations, fl[:crit][:location]) if fl.dig(:crit, :location)
+          row[:critical_type] = Lookup.id(:critical_types, fl[:crit][:type]) if fl.dig(:crit, :type)
+          row[:critical_rank] = fl[:crit][:rank] if fl.dig(:crit, :rank)
+        end
+
+        DB.conn[:flare_events].insert(row)
+      end
+    end
+  end
+
+  # ------------------------------------------------------------
+  # Downstream buffer hook – segments by prompt & queues chunks
+  # ------------------------------------------------------------
+  DOWNSTREAM_HOOK_ID = 'CombatTracker::downstream'
+  PROCESS_QUEUE = Queue.new
+  @buffer = []
+
+  class << self
+    attr_reader :buffer
+  end
+
+  segment_buffer = proc do |server_string|
+    CombatTracker.buffer << server_string
+    Log.log(:VERBOSE, "SEG", "buffer << #{server_string}")
+    if server_string =~ /<prompt time="\d+">/
+      Log.log(:DEBUG, "SEG", "[CB] prompt is queuing #{CombatTracker.buffer.size} lines")
+      PROCESS_QUEUE << CombatTracker.buffer.shift(CombatTracker.buffer.size)
+    end
+    server_string
+  end
+  DownstreamHook.add(DOWNSTREAM_HOOK_ID, segment_buffer)
+
+  before_dying do
+    Flusher.flush!
+    DownstreamHook.remove(DOWNSTREAM_HOOK_ID)
+    DB.conn.disconnect
+  end
+
+  loop { Processor.process(PROCESS_QUEUE.pop) }
+end
