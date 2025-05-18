@@ -139,6 +139,8 @@ CREATE TABLE creature_instances (
     display_name  TEXT NOT NULL,
     first_seen_at DATETIME NOT NULL,
     last_seen_at  DATETIME,
+    killed_at     DATETIME,
+    killed_by_attack_id INTEGER REFERENCES attack_events(id),
     UNIQUE (session_id, exist_id)
 );
 
@@ -148,21 +150,16 @@ CREATE TABLE attack_events (
   session_id            INTEGER NOT NULL REFERENCES combat_sessions(id),
   sequence              INTEGER NOT NULL,
   creature_instance_id  INTEGER,
-  target_exist_id       INTEGER NOT NULL,
-  target_noun           TEXT,
-  target_name           TEXT,
-  attack_name           TEXT NOT NULL,
-  attack_damage         INTEGER,
-  attack_crit_type      TEXT,
-  attack_crit_location  TEXT,
-  attack_crit_rank      INTEGER,
-  statuses              TEXT,
+  attack_type_id        INTEGER REFERENCES attack_types(id),
   occurred_at           DATETIME NOT NULL,
-  raw_line              TEXT,
+  outcome_id            INTEGER REFERENCES outcome_types(id),
+  is_fatal              BOOLEAN DEFAULT FALSE,
   FOREIGN KEY (creature_instance_id) REFERENCES creature_instances(id) DEFERRABLE INITIALLY DEFERRED
 );
 -- timeline index: all activity in a hunt
 CREATE INDEX idx_attack_session_time ON attack_events(session_id, sequence);
+CREATE INDEX idx_attack_events_creature_instance ON attack_events(creature_instance_id);
+
 
 -- 2‑d  Resolution header (one‑to‑one with attack)
 CREATE TABLE attack_resolutions (
@@ -221,14 +218,16 @@ end;
 CREATE TABLE damage_components (
     id            INTEGER PRIMARY KEY,
     attack_id     INTEGER REFERENCES attack_events(id) ON DELETE CASCADE,
+    flare_id      INTEGER REFERENCES flare_events(id),
     location_id   INTEGER REFERENCES locations(id),
     damage        INTEGER,
     critical_type INTEGER REFERENCES critical_types(id),
     critical_rank INTEGER,
-    damage_type   INTEGER REFERENCES damage_types(id),
-    raw_line      TEXT
+    damage_type   INTEGER REFERENCES damage_types(id)
 );
 CREATE INDEX idx_damage_components_attack ON damage_components(attack_id);
+CREATE INDEX idx_damage_components_flare ON damage_components(flare_id);
+
 
 -- 2‑h  Flare events
 CREATE TABLE flare_events (
@@ -236,21 +235,14 @@ CREATE TABLE flare_events (
     session_id      INTEGER NOT NULL DEFAULT 0,
     attack_sequence INTEGER NOT NULL DEFAULT 0,
     flare_sequence  INTEGER NOT NULL DEFAULT 0,
-    flare_name      TEXT NOT NULL,
-    target_exist_id INTEGER,
-    target_noun     TEXT,
-    target_name     TEXT,
+    flare_type_id   INTEGER REFERENCES flare_types(id),
     attack_id       INTEGER REFERENCES attack_events(id) ON DELETE CASCADE,
     flare_type      INTEGER REFERENCES flare_types(id),
-    location_id     INTEGER REFERENCES locations(id),
-    damage          INTEGER,
-    critical_type   INTEGER REFERENCES critical_types(id),
-    critical_rank   INTEGER,
-    note            TEXT,
-    raw_line        TEXT
+    is_fatal        BOOLEAN DEFAULT FALSE,
 );
-CREATE INDEX idx_flare_events_type_location ON flare_events(flare_type, location_id);
 CREATE INDEX idx_flares_session_seq ON flare_events(session_id, attack_sequence);
+CREATE INDEX idx_flare_events_attack_id ON flare_events(attack_id);
+
 
 -- 2‑i  Projectile instances (every lodged arrow / bolt / dagger …)
 CREATE TABLE projectiles (
@@ -282,5 +274,18 @@ CREATE TABLE status_events (
 );
 CREATE INDEX idx_status_events_started ON status_events(started_at);
 CREATE INDEX idx_status_events_creature_status ON status_events(creature_id, status_type);
+CREATE INDEX idx_status_events_session_id ON status_events(session_id);
+
+
+CREATE TABLE combat_summary (
+  id                      INTEGER PRIMARY KEY AUTOINCREMENT,
+  session_id              INTEGER REFERENCES combat_sessions(id),
+  creature_instance_id    INTEGER REFERENCES creature_instances(id),
+  num_attacks             INTEGER,
+  total_damage            INTEGER,
+  fatal_damage            INTEGER,
+  combat_duration         REAL, -- seconds
+  created_at              DATETIME DEFAULT CURRENT_TIMESTAMP
+);
 
 COMMIT;
