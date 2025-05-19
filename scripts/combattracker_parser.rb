@@ -1,3 +1,4 @@
+#QUIET
 module CombatTracker
   # ------------------------------------------------------------
   # Parser – patterns preserved from original
@@ -14,6 +15,7 @@ module CombatTracker
     # ---- definitions ---------------------------------------------------
     AttackDef     = Struct.new(:name, :patterns)
     FlareDef      = Struct.new(:name, :patterns, :damaging)
+    LodgedDef     = Struct.new(:type, :patterns)
     OutcomeDef    = Struct.new(:type, :patterns)
     ResolutionDef = Struct.new(:type, :patterns)
     StatusDef     = Struct.new(:type, :patterns)
@@ -172,15 +174,17 @@ module CombatTracker
         /A heavy barrier of stone momentarily forms around (?<target>.+?) and blocks the attack!/,
         /Amazingly, (?<target>.+?) manages to block the .+? with .+?!/,
         /At the last moment, (?<target>.+?) blocks the .+? with .+?!/,
+        /Fumbling aimlessly, (?<target>.+?) manages to deflect the .+? with .+?!/,
         /In the nick of time, (?<target>.+?) interposes .+? between .+? and the .+?!/,
         /Lying flat on .+? back, (?<target>.+?) barely deflects the .+? with .+?!/,
         /Nearly insensible, (?<target>.+?) desperately blocks the .+? with .+?!/,
         /Nearly insensible, (?<target>.+?) wildly blocks the .+? with .+?!/,
+        /Reeling and staggering, (?<target>.+?) barely blocks the .+? with .+?!/,
         /Stupefied, (?<target>.+?) blocks the .+? by blind luck!/,
         /The thorny barrier surrounding (?<target>.+?) blocks your .+?!/,
         /Unable to focus clearly, (?<target>.+?) blindly blocks the .+?!/,
         /With extreme effort, (?<target>.+?) blocks the .+? with .+?!/,
-        /With no room to spare, (?<target>.+?) manages to parry the .+? with .+?!/,
+        /With no room to spare, (?<target>.+?) blocks the .+? with .+?!/,
         /(?<target>.+?) awkwardly scrambles along the ground to avoid the .+?!/,
         /(?<target>.+?) awkwardly scrambles to the right and blocks the .+?!/,
         /(?<target>.+?) barely manages to block the .+? with .+?!/,
@@ -191,14 +195,17 @@ module CombatTracker
         /(?<target>.+?) rolls to one side and deflects the .+? with .+?!/,
         /(?<target>.+?) skillfully interposes .+? between .+? and the .+?!/,
         /(?<target>.+?) stumbles dazedly, but manages to block the .+? with .+?!/,
+        /(?<target>.+?) stumbles dazedly, somehow managing to block the .+? with .+?!/,
         /(?<target>.+?) tumbles to the side and deflects the .+? with .+?!/
       ].freeze),
       OutcomeDef.new(:parry, [
         /Amazingly, (?<target>.+?) manages to parry the .+? with .+?!/,
         /At the last moment, (?<target>.+?) parries the .+? with .+?!/,
         /Using the bone plates surrounding .+? forearms, (?<target>.+?) parries your .+?!/,
+        /With extreme effort, (?<target>.+?) beats back the .+? with .+?!/,
         /With no room to spare, (?<target>.+?) manages to parry the .+? with .+?!/,
         /(?<target>.+?) flails on the ground but manages to parry the .+? with .+?!/,
+        /(?<target>.+?) rolls to one side and parries the .+? with .+?!/,
       ].freeze),
       OutcomeDef.new(:fumble, [/d100 == 1 FUMBLE!/].freeze),
       OutcomeDef.new(:hindrance, [/\[Spell Hindrance for (?<armor>.+?) is (?<hindrance_amount>\d+)% with current Armor Use skill, d100= (?<roll>\d+)\]/].freeze),
@@ -219,7 +226,10 @@ module CombatTracker
 
     STATUS_DEFS = [
       StatusDef.new(:stunned, [/The (?<target>.+?) is stunned!/].freeze),
-      StatusDef.new(:prone, [/It is knocked to the ground!/].freeze),
+      StatusDef.new(:prone, [
+        /It is knocked to the ground!/,
+        /(?<target>.+?) is knocked to the ground!/
+      ].freeze),
       StatusDef.new(:immobilized, [/(?<target>.+?) form is entangled in an unseen force that restricts .+? movement\./].freeze),
       StatusDef.new(:blind, [/You blinded (?<target>[^!]+)!/].freeze)
     ].freeze
@@ -235,6 +245,16 @@ module CombatTracker
     OUTCOME_DETECTOR    = Regexp.union(OUTCOME_LOOKUP.map(&:first)).freeze
     RESOLUTION_DETECTOR = Regexp.union(RESOLUTION_LOOKUP.map(&:first)).freeze
     STATUS_DETECTOR     = Regexp.union(STATUS_LOOKUP.map(&:first)).freeze
+
+    LODGED_DEFS = Regexp.union(
+      /The .+? breaks into tiny fragments./,
+      /The .+? passes straight through (?<target>.+?)<\/popBold> (?<location>.+?) and trails ethereal wisps behind it as it makes its way into the distance\./,
+      /The .+? sails through (?<target>.+?) and off into the distance\./,
+      /The .+? sticks in (?<target>.+?)'s (?<location>.+?)!/,
+      /The .+? streaks off into the distance!/,
+      /The .+? streaks into (?<target>.+?)'s (?<location>.+?) and off into the distance\./
+    ).freeze
+    # The arrow sticks in a heavily armored battle mastodon's abdomen!
 
     module_function
 
@@ -265,6 +285,11 @@ module CombatTracker
       end
     end
 
+    def parse_lodged(line)
+      LODGED_DEFS.match(line)
+      Regexp.last_match(:location)
+    end
+
     def parse_resolution(line)
       return unless RESOLUTION_DETECTOR.match?(line)
       RESOLUTION_LOOKUP.each do |rx, type|
@@ -283,3 +308,5 @@ module CombatTracker
     end
   end
 end
+
+Lich::Messaging.msg("info","CombatTracker Parser loaded.")

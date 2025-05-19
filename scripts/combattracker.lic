@@ -53,7 +53,7 @@ module CombatTracker
   # ------------------------------------------------------------
   module Log
     LEVELS = %i[VERBOSE DEBUG INFO WARN ERROR].freeze
-    @level = :INFO
+    @level = :DEBUG
 
     class << self
       # ensure we're always reading the same @level
@@ -73,7 +73,7 @@ module CombatTracker
       def log(level, ctx, msg)
         return if LEVELS.index(level) < LEVELS.index(@level)
         timestamp = Time.now.strftime('%H:%M:%S')
-        puts "[#{timestamp}] [CB #{level.to_s.upcase.ljust(5)}] [#{ctx}] #{msg}"
+        respond "[#{timestamp}] [CB #{level.to_s.upcase.ljust(5)}] [#{ctx}] #{msg}"
       end
     end
   end
@@ -296,24 +296,41 @@ module CombatTracker
         if (a = Parser.parse_attack(ln))
           events << current if current
           current = init_event(a)
-        elsif current && (r = Parser.parse_resolution(ln))
-          current[:resolution] = r
-        elsif current && (r = Parser.parse_outcome(ln))
-          current[:outcome] = r
-        elsif current && (s = Parser.parse_status(ln))
-          current[:statuses] << s
-        elsif current && (f = Parser.parse_flare(ln))
-          current[:flares]    << f.merge(damage: 0, crit: nil)
-          current[:ctx] = :flare
+
         elsif current && ln =~ /\.\.\. and hit for (?<d>\d+) points? of damage!/i
           current[:damage] += Regexp.last_match[:d].to_i
           current[:ctx]     = :attack
+
         elsif current && ln =~ /\.\.\. (?<d>\d+) points of damage!/i
           dmg = Regexp.last_match[:d].to_i
           (current[:ctx] == :flare ? current[:flares].last : current)[:damage] += dmg
-        elsif current && (c = CritRanks.parse(ln).values.first)
+
+        elsif current && (r = Parser.parse_resolution(ln))
+          current[:resolution] = r
+
+        elsif current && (l = Parser.parse_lodged(ln))
+          current[:lodged] = l
+          if current[:target][:id].nil?
+            t = Parser.extract_link(ln) || { id: nil, noun: nil, name: raw_t }
+            current[:target] = t[:target] || {}
+          end
+
+        elsif current && (o = Parser.parse_outcome(ln))
+          current[:outcome] = o
+
+        elsif current && (s = Parser.parse_status(ln))
+          current[:statuses] << s
+
+        elsif current && (f = Parser.parse_flare(ln))
+          current[:flares]    << f.merge(damage: 0, crit: nil)
+          current[:ctx] = :flare
+
+
+
+        elsif current && (c = CritRanks.parse(ln.gsub(/<.+?>/,'')).values.first)
           target = current[:ctx] == :flare ? current[:flares].last : current
           target[:crit] = { type: c[:type], location: c[:location], rank: c[:rank], raw: ln.strip }
+
         end
       end
       events << current if current
@@ -339,6 +356,7 @@ module CombatTracker
       seq        = Session.next_sequence
       tgt        = ev[:target]
       ci_id      = upsert_creature(session_id, tgt) if tgt[:id]
+      now        = Time.now
       
       begin
         outcome_id = Lookup.id(:outcome_types, ev[:outcome])
@@ -354,7 +372,7 @@ module CombatTracker
         attack_type_id:       Lookup.id(:attack_types, ev[:name]),
         is_fatal:             ev.dig(:crit, :fatal),
         outcome_id:           outcome_id,
-        occurred_at:          Time.now,
+        occurred_at:          now,
       })
 
       damage_component = {
@@ -374,6 +392,8 @@ module CombatTracker
       persist_statuses(ev[:statuses], attack_id, session_id)
       persist_resolution(ev[:resolution], attack_id, seq, session_id) if ev[:resolution]
       persist_flares(ev[:flares], attack_id, seq, tgt, session_id)    if ev[:flares].any?
+      persist_lodged(ev[:lodged], attack_id, ci_id, now) if ev[:lodged]
+      
     end
 
     def upsert_creature(session_id, tgt)
@@ -457,6 +477,17 @@ module CombatTracker
           CombatTracker::DebugInsert.insert(:damage_components, damage_component)
         end
       end
+    end
+
+    def persist_lodged(lodged, atk_id, ci_id, time)
+      Log.log(:DEBUG, "LODG", "Lodged is #{lodged}.")
+      CombatTracker::DebugInsert.insert(:lodged_events, {
+        attack_id:    atk_id,
+        creature_id:  ci_id,
+        location_id:  Lookup.id(:locations, lodged),
+        lodged_at:    time,
+        removed_at:   nil
+      })
     end
   end
 
