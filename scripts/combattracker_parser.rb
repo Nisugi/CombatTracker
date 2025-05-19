@@ -1,18 +1,23 @@
-#QUIET
 module CombatTracker
-  # ------------------------------------------------------------
-  # Parser – patterns preserved from original
-  # ------------------------------------------------------------
   module Parser
     # ---- helpers -------------------------------------------------------
+    # Regular expression to match a target link in the text.
     TARGET_LINK = %r{<a exist="(?<id>\d+)" noun="(?<noun>[^"]+)">(?<name>[^<]+)</a>}i.freeze
 
+    # Extracts the target link information from the given text.
+    #
+    # @param text [String] the text containing the target link.
+    # @return [Hash, nil] a hash with keys :id, :noun, and :name if a match is found, otherwise nil.
+    # @example
+    #   extract_link('<a exist="123" noun="monster">ugly goblin</a>')
+    #   # => { id: 123, noun: "goblin", name: "ugly goblin" }
     def self.extract_link(text)
       m = TARGET_LINK.match(text) or return
       { id: m[:id].to_i, noun: m[:noun], name: m[:name] }
     end
 
     # ---- definitions ---------------------------------------------------
+    # Struct definitions for various combat-related entities.
     AttackDef     = Struct.new(:name, :patterns)
     FlareDef      = Struct.new(:name, :patterns, :damaging)
     LodgedDef     = Struct.new(:type, :patterns)
@@ -165,6 +170,7 @@ module CombatTracker
         /(?<target>.+?) evades the .+? by inches!/,
         /(?<target>.+?) evades the .+? with ease!/,
         /(?<target>.+?) flails on the ground but manages to barely dodge the .+?!/,
+        /(?<target>.+?) gracefully avoids the .+?!/,
         /(?<target>.+?) moves at the last moment to evade the .+?!/,
         /(?<target>.+?) rolls to one side and evades the .+?!/,
         /(?<target>.+?) skillfully dodges the .+?!/,
@@ -193,6 +199,7 @@ module CombatTracker
         /(?<target>.+?) interposes .+? between .+? and the .+?!/,
         /(?<target>.+?) manages to block the .+? with .+?!/,
         /(?<target>.+?) rolls to one side and deflects the .+? with .+?!/,
+        /(?<target>.+?) skillfully blocks the .+? with .+?!/,
         /(?<target>.+?) skillfully interposes .+? between .+? and the .+?!/,
         /(?<target>.+?) stumbles dazedly, but manages to block the .+? with .+?!/,
         /(?<target>.+?) stumbles dazedly, somehow managing to block the .+? with .+?!/,
@@ -204,6 +211,7 @@ module CombatTracker
         /Using the bone plates surrounding .+? forearms, (?<target>.+?) parries your .+?!/,
         /With extreme effort, (?<target>.+?) beats back the .+? with .+?!/,
         /With no room to spare, (?<target>.+?) manages to parry the .+? with .+?!/,
+        /(?<target>.+?) barely manages to fend off the .+? with .+?!/,
         /(?<target>.+?) flails on the ground but manages to parry the .+? with .+?!/,
         /(?<target>.+?) rolls to one side and parries the .+? with .+?!/,
       ].freeze),
@@ -234,18 +242,21 @@ module CombatTracker
       StatusDef.new(:blind, [/You blinded (?<target>[^!]+)!/].freeze)
     ].freeze
 
+    # Lookup tables for different combat patterns.
     ATTACK_LOOKUP     = ATTACK_DEFS.flat_map     { |d| d.patterns.map { |rx| [rx, d.name] } }.freeze
     FLARE_LOOKUP      = FLARE_DEFS.flat_map      { |d| d.patterns.map { |rx| [rx, d.name, d.damaging] } }.freeze
     RESOLUTION_LOOKUP = RESOLUTION_DEFS.flat_map { |d| d.patterns.map { |rx| [rx, d.type] } }.freeze
     OUTCOME_LOOKUP    = OUTCOME_DEFS.flat_map    { |d| d.patterns.map { |rx| [rx, d.type] } }.freeze
     STATUS_LOOKUP     = STATUS_DEFS.flat_map     { |d| d.patterns.map { |rx| [rx, d.type] } }.freeze
 
+    # Regular expressions to detect various combat actions.
     ATTACK_DETECTOR     = Regexp.union(ATTACK_LOOKUP.map(&:first)).freeze
     FLARE_DETECTOR      = Regexp.union(FLARE_LOOKUP.map(&:first)).freeze
     OUTCOME_DETECTOR    = Regexp.union(OUTCOME_LOOKUP.map(&:first)).freeze
     RESOLUTION_DETECTOR = Regexp.union(RESOLUTION_LOOKUP.map(&:first)).freeze
     STATUS_DETECTOR     = Regexp.union(STATUS_LOOKUP.map(&:first)).freeze
 
+    # Regular expression definitions for lodged attacks.
     LODGED_DEFS = Regexp.union(
       /The .+? breaks into tiny fragments./,
       /The .+? passes straight through (?<target>.+?)<\/popBold> (?<location>.+?) and trails ethereal wisps behind it as it makes its way into the distance\./,
@@ -258,6 +269,13 @@ module CombatTracker
 
     module_function
 
+    # Parses an attack line and extracts relevant information.
+    #
+    # @param line [String] the line containing the attack information.
+    # @return [Hash, nil] a hash with keys :name, :target (if present), and :raw if a match is found, otherwise nil.
+    # @example
+    #   parse_attack("You swing a sword at an ugly goblin!")
+    #   # => { name: "goblin", target: { id: 123456, noun: "goblin", name: "ugly goblin" }, raw: "The goblin attacks with a sword!" }
     def parse_attack(line)
       return unless ATTACK_DETECTOR.match?(line)
       ATTACK_LOOKUP.each do |rx, name|
@@ -272,6 +290,13 @@ module CombatTracker
       end
     end
 
+    # Parses a flare line and extracts relevant information.
+    #
+    # @param line [String] the line containing the flare information.
+    # @return [Hash, nil] a hash with keys :name, :damaging, :target (if present), and :raw if a match is found, otherwise nil.
+    # @example
+    #   parse_flare("A bright flare explodes!")
+    #   # => { name: "flare", damaging: true, raw: "A bright flare explodes!" }
     def parse_flare(line)
       return unless FLARE_DETECTOR.match?(line)
       FLARE_LOOKUP.each do |rx, name, damaging|
@@ -285,11 +310,25 @@ module CombatTracker
       end
     end
 
+    # Parses a lodged line and extracts the location of the lodged target.
+    #
+    # @param line [String] the line containing the lodged information.
+    # @return [String, nil] the location of the lodged target if a match is found, otherwise nil.
+    # @example
+    #   parse_lodged("The arrow sticks in the goblin's arm!")
+    #   # => "arm"
     def parse_lodged(line)
       LODGED_DEFS.match(line)
       Regexp.last_match(:location)
     end
 
+    # Parses a resolution line and extracts relevant information.
+    #
+    # @param line [String] the line containing the resolution information.
+    # @return [Hash, nil] a hash with keys :type and :data if a match is found, otherwise nil.
+    # @example
+    #   parse_resolution("The attack was resolved successfully.")
+    #   # => { type: "as_ds", data: { AS: 12 DS: 34 vs AvD: 56 + D100: 78 == 109 } }
     def parse_resolution(line)
       return unless RESOLUTION_DETECTOR.match?(line)
       RESOLUTION_LOOKUP.each do |rx, type|
@@ -297,16 +336,28 @@ module CombatTracker
       end
     end
 
+    # Parses an outcome line and extracts the outcome type.
+    #
+    # @param line [String] the line containing the outcome information.
+    # @return [String, nil] the outcome type if a match is found, otherwise nil.
+    # @example
+    #   parse_outcome("The goblin dodges the attack.")
+    #   # => "evade"
     def parse_outcome(line)
       return unless OUTCOME_DETECTOR.match?(line)
       OUTCOME_LOOKUP.each { |rx, type| return type if rx.match?(line)}
     end
 
+    # Parses a status line and extracts the status type.
+    #
+    # @param line [String] the line containing the status information.
+    # @return [String, nil] the status type if a match is found, otherwise nil.
+    # @example
+    #   parse_status("The goblin is stunned!")
+    #   # => "stunned"
     def parse_status(line)
       return unless STATUS_DETECTOR.match?(line)
       STATUS_LOOKUP.each { |rx, type| return type if rx.match?(line) }
     end
   end
 end
-
-Lich::Messaging.msg("info","CombatTracker Parser loaded.")

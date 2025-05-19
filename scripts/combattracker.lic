@@ -1,67 +1,45 @@
-=begin
-  CombatTracker.lic
-    Database based combat event tracking. This is the "recorder", it creates a relational database 
-    that tags creatures to hunting sessions, attacks to creatures, and flares to attacks.
-    
-    The end goal is a data tracking system that can be used to create various reports such as:
-    What happened to creature #8282851?
-    How many creatures did I murder last hunt?
-    What's the average damage of my briar flares? Crit distribution?
-      and many more...
-
-
-        author: Nisugi
-  contributors: Nisugi
-          game: Gemstone
-          tags: hunting, combat, tracking
-       version: 0.1
-
-  Change Log:
-  v0.1
-    - Alpha release
-=end
-
-require 'sequel'
-
-unless Script.exists?("combattracker_parser.rb")
-  puts("CombatTracker requires the script combattracker_parser.rb.")
-  puts("Please download it and try again.")
-  puts(";repository download combattracker_parser")
-  exit
-end
-unless defined?(CombatTracker::Parser)
-  Script.run("combattracker_parser")
-end
-
 module CombatTracker
-  # ------------------------------------------------------------
-  # Configuration
-  # ------------------------------------------------------------
   module Config
     class << self
+      # Accessor for configuration settings.
+      # 
+      # @!attribute [rw] session_timeout
+      #   @return [Integer] seconds of inactivity before a new session
+      # @!attribute [rw] flush_interval
+      #   @return [Integer] seconds between background DB flushes
+      # @!attribute [rw] max_cache_rows
+      #   @return [Integer] early flush threshold
+      # @!attribute [rw] db_path
+      #   @return [String] path to the database file
       attr_accessor :session_timeout, :flush_interval, :max_cache_rows, :db_path
     end
 
     self.session_timeout = 180      # seconds of inactivity before a new session
     self.flush_interval  = 300      # seconds between background DB flushes
-    self.max_cache_rows  = 10_000   # early‑flush threshold
+    self.max_cache_rows  = 10_000   # early flush threshold
     self.db_path         = File.join(DATA_DIR, XMLData.game, Char.name, 'combat.db')
   end
 
-  # ------------------------------------------------------------
-  # Debug messaging
-  # ------------------------------------------------------------
   module Log
     LEVELS = %i[VERBOSE DEBUG INFO WARN ERROR].freeze
-    @level = :DEBUG
+    @level = :INFO
 
     class << self
-      # ensure we're always reading the same @level
+      # Retrieves the current log level.
+      #
+      # @return [Symbol] the current log level
       def level
         @level
       end
 
-      # normalize input to lowercase symbol and store it
+      # Sets the log level if it is valid.
+      #
+      # @param lvl [Symbol] the log level to set
+      #   Valid values are `:VERBOSE`, `:DEBUG`, `:INFO`, `:WARN`, and `:ERROR`.
+      # @return [void]
+      # @raise [ArgumentError] if the log level is unknown
+      # @example
+      #   CombatTracker::Log.level = :DEBUG
       def level=(lvl)
         if LEVELS.include?(lvl)
           @level = lvl
@@ -70,6 +48,14 @@ module CombatTracker
         end
       end
 
+      # Logs a message at the specified level.
+      #
+      # @param level [Symbol] the log level
+      # @param ctx [Symbol] the context of the log
+      # @param msg [String] the message to log
+      # @return [void]
+      # @example
+      #   Log.log(:INFO, :DB, "Database connection established")
       def log(level, ctx, msg)
         return if LEVELS.index(level) < LEVELS.index(@level)
         timestamp = Time.now.strftime('%H:%M:%S')
@@ -78,12 +64,12 @@ module CombatTracker
     end
   end
 
-  # ------------------------------------------------------------
-  # Database connection & schema bootstrap
-  # ------------------------------------------------------------
   module DB
     extend self
 
+    # Establishes a connection to the database.
+    #
+    # @return [Sequel::Database] the database connection
     def conn
       @conn ||= Sequel.sqlite(
         Config.db_path,
@@ -93,6 +79,12 @@ module CombatTracker
       )
     end
 
+    # Loads the database schema if it is not already loaded.
+    #
+    # @return [void]
+    # @note This method will initialize the schema only if there are no existing tables.
+    # @example
+    #   DB.load_schema!
     def load_schema!
       path = File.expand_path('db_schema.sql', DATA_DIR)
       return unless conn.tables.empty?
@@ -103,10 +95,12 @@ module CombatTracker
   end
   DB.load_schema!
 
-  # ------------------------------------------------------------
-  # Seed lookup tables from parser definitions
-  # ------------------------------------------------------------
   module DBSeeder
+    # Seeds the database with initial data from parser definitions.
+    #
+    # @return [void]
+    # @example
+    #   DBSeeder.seed!
     def self.seed!
       conn = DB.conn
 
@@ -134,30 +128,32 @@ module CombatTracker
           .insert(name: res_def.type.to_s.upcase)
       end
 
-      # 2) Status types
       Parser::STATUS_DEFS.each_with_index do |st_def|
         conn[:status_types]
           .insert_conflict(target: :name, do_nothing: true)
           .insert(name: st_def.type.to_s.upcase)
       end
 
-
-
       Log.log(:info, "DBSEED", "Seeded lookup tables from Parser defs")
     end
   end
   DBSeeder.seed!
 
-  # ------------------------------------------------------------
-  # Debug messaging for inserting to DB
-  # ------------------------------------------------------------
   module DebugInsert
+    # Inserts a row into the specified table and logs the operation.
+    #
+    # @param table [Symbol] the name of the table to insert into
+    # @param row [Hash] the row data to insert
+    # @return [void]
+    # @raise [SQLite3::ConstraintException] if there is a constraint violation
+    # @example
+    #   DebugInsert.insert(:attack_types, { name: 'FIREBALL' })
     def self.insert(table, row)
       Log.log(:DEBUG, "DB-INS", "-> #{table}: #{row.inspect}") unless table == :resolution_components
       DB.conn[table].insert(row)
     rescue SQLite3::ConstraintException => e
       Log.log(:ERROR, "DB-INS", "FAILED #{table}: #{e.class}: #{e.message}")
-      # show what FK’s this table has
+      # show what FK?s this table has
       fk_defs = DB.conn["PRAGMA foreign_key_list(#{table})"].all
       Log.log(:ERROR, "DB-INS", "FK definitions for #{table}: #{fk_defs.inspect}")
       # show any dangling child rows
@@ -167,18 +163,20 @@ module CombatTracker
     end
   end
 
-  # ------------------------------------------------------------
-  # Simple Foreign Key helpers
-  # ------------------------------------------------------------
   module Lookup
+    # Retrieves the ID of a record from the specified table by name.
+    #
+    # @param table [Symbol] the name of the table to query
+    # @param name [String] the name of the record to find
+    # @return [Integer] the ID of the record
+    # @raise [RuntimeError] if the record is not found
+    # @example
+    #   Lookup.id(:attack_types, 'FIREBALL')
     def self.id(table, name)
       DB.conn[table].first(name: name.to_s.upcase)&.fetch(:id) || raise("Unknown #{table}: #{name}")
     end
   end
 
-  # ------------------------------------------------------------
-  # Session manager – ensures we always have an active session
-  # ------------------------------------------------------------
   module Session
     extend self
 
@@ -186,11 +184,22 @@ module CombatTracker
     @seq = 0
     @last_seen = nil
 
+    # Retrieves the current session ID, ensuring a session exists.
+    #
+    # @return [Integer] the current session ID
     def current_id = ensure_session!
+
+    # Retrieves the next sequence number for the current session.
+    #
+    # @return [Integer] the next sequence number
     def next_sequence = ensure_session! && (@seq += 1)
 
     private
 
+    # Ensures that a valid session exists, creating one if necessary.
+    #
+    # @return [Integer] the current session ID
+    # @raise [RuntimeError] if session creation fails
     def ensure_session!
       now  = Time.now
       char = defined?(Char) ? Char.name : 'Unknown'
@@ -215,15 +224,18 @@ module CombatTracker
     end
   end
 
-  # ------------------------------------------------------------
-  # Lightweight row cache + bulk flusher
-  # ------------------------------------------------------------
   module Store
     CACHE = Hash.new { |h, k| h[k] = [] }
     MUTEX = Mutex.new
 
     module_function
 
+    # Pushes a row into the cache for the specified table.
+    #
+    # @param table [Symbol] the name of the table
+    # @param row [Hash] the row data to cache
+    # @return [void]
+    # @note This will trigger a flush if the cache size exceeds the configured limit.
     def push(table, row)
       MUTEX.synchronize { CACHE[table] << row }
       Flusher.flush! if CACHE[table].size >= Config.max_cache_rows
@@ -238,6 +250,12 @@ module CombatTracker
 
     module_function
 
+    # Flushes the cached rows to the database.
+    #
+    # @return [void]
+    # @note This method will clear the cache after flushing.
+    # @example
+    #   Flusher.flush!
     def flush!
       batches = nil
       Store::MUTEX.synchronize { batches = Store::CACHE.transform_values(&:dup) }
@@ -253,9 +271,13 @@ module CombatTracker
 
       Store::MUTEX.synchronize { TABLES.each { |tbl| Store::CACHE[tbl].clear } }
     rescue => e
-      Log.log(:error, :FLUSH, "flush failed → #{e.message}")
+      Log.log(:error, :FLUSH, "flush failed ? #{e.message}")
     end
 
+    # Deduplicates creature instances based on session ID and existence ID.
+    #
+    # @param rows [Array<Hash>] the rows to deduplicate
+    # @return [Array<Hash>] the deduplicated rows
     def dedup_creatures(rows)
       rows
         .group_by { |r| [r[:session_id], r[:exist_id]] }
@@ -263,6 +285,11 @@ module CombatTracker
         .map { |grp| grp.max_by { |r| r[:last_seen_at] } }
     end
 
+    # Starts a background thread to periodically flush the cache.
+    #
+    # @return [void]
+    # @example
+    #   Flusher.start_background!
     def start_background!
       Thread.new do
         loop do
@@ -274,12 +301,15 @@ module CombatTracker
   end
   Flusher.start_background!
 
-  # ------------------------------------------------------------
-  # Processor – turns a buffered chunk into persisted records
-  # ------------------------------------------------------------
   module Processor
     module_function
 
+    # Processes a chunk of combat event data.
+    #
+    # @param chunk [String] the raw data chunk containing combat events.
+    # @return [void] returns nothing.
+    # @example
+    #   Processor.process("<raw combat data>")
     def process(chunk)
       events = parse_events(chunk)
       return if events.empty?
@@ -287,7 +317,12 @@ module CombatTracker
       DB.conn.transaction { events.each { |ev| persist(ev) } }
     end
 
-    # -- parse ---------------------------------------------------
+    # Parses the lines of combat event data into structured events.
+    #
+    # @param lines [Array<String>] the lines of combat event data.
+    # @return [Array<Hash>] an array of parsed event hashes.
+    # @example
+    #   events = parse_events(["Attack!", "... and hit for 5 points of damage!"])
     def parse_events(lines)
       events = []
       current = nil
@@ -325,8 +360,6 @@ module CombatTracker
           current[:flares]    << f.merge(damage: 0, crit: nil)
           current[:ctx] = :flare
 
-
-
         elsif current && (c = CritRanks.parse(ln.gsub(/<.+?>/,'')).values.first)
           target = current[:ctx] == :flare ? current[:flares].last : current
           target[:crit] = { type: c[:type], location: c[:location], rank: c[:rank], raw: ln.strip }
@@ -337,6 +370,12 @@ module CombatTracker
       events
     end
 
+    # Initializes a new event hash with attack information.
+    #
+    # @param attack_info [Hash] the information about the attack.
+    # @return [Hash] a new event hash initialized with attack details.
+    # @example
+    #   event = init_event({ name: "Fireball", target: { id: 1, name: "Goblin" } })
     def init_event(attack_info)
       {
         name: attack_info[:name],
@@ -350,7 +389,13 @@ module CombatTracker
       }
     end
 
-    # -- persist -------------------------------------------------
+    # Persists an event to the database.
+    #
+    # @param ev [Hash] the event data to persist.
+    # @return [void] returns nothing.
+    # @raise [StandardError] if there is an issue with database operations.
+    # @example
+    #   persist({ name: "Fireball", damage: 10, target: { id: 1 } })
     def persist(ev)
       session_id = Session.current_id
       seq        = Session.next_sequence
@@ -391,11 +436,19 @@ module CombatTracker
 
       persist_statuses(ev[:statuses], attack_id, session_id)
       persist_resolution(ev[:resolution], attack_id, seq, session_id) if ev[:resolution]
-      persist_flares(ev[:flares], attack_id, seq, tgt, session_id)    if ev[:flares].any?
+      persist_flares(ev[:flares], attack_id, seq, session_id) if ev[:flares].any?
       persist_lodged(ev[:lodged], attack_id, ci_id, now) if ev[:lodged]
       
     end
 
+    # Upserts a creature instance in the database.
+    #
+    # @param session_id [String] the ID of the current session.
+    # @param tgt [Hash] the target creature data.
+    # @return [Integer] the ID of the upserted creature instance.
+    # @raise [StandardError] if there is an issue with database operations.
+    # @example
+    #   creature_id = upsert_creature("session_123", { id: 1, noun: "Goblin", name: "Goblin Warrior" })
     def upsert_creature(session_id, tgt)
       now = Time.now
       Log.log(:DEBUG, "CREATURE", "upsert_creature session_id=#{session_id.inspect}, exist_id=#{tgt[:id]}")
@@ -408,6 +461,14 @@ module CombatTracker
       DB.conn[:creature_instances].where(session_id:, exist_id: tgt[:id]).get(:id)
     end
 
+    # Persists statuses associated with an attack.
+    #
+    # @param sts [Array<String>] the statuses to persist.
+    # @param atk_id [Integer] the ID of the attack.
+    # @param session_id [String] the ID of the current session.
+    # @return [void] returns nothing.
+    # @example
+    #   persist_statuses(["Stunned", "Burning"], 1, "session_123")
     def persist_statuses(sts, atk_id, session_id)
       now = Time.now
       sts.each do |st|
@@ -420,6 +481,16 @@ module CombatTracker
       end
     end
 
+    # Persists the resolution of an attack.
+    #
+    # @param res [Hash] the resolution data.
+    # @param atk_id [Integer] the ID of the attack.
+    # @param seq [Integer] the sequence number of the attack.
+    # @param session_id [String] the ID of the current session.
+    # @return [void] returns nothing.
+    # @raise [StandardError] if there is an issue with database operations.
+    # @example
+    #   persist_resolution({ type: "as_ds", data: { total: 10, roll: 5 }, 1, 1, "session_123")
     def persist_resolution(res, atk_id, seq, session_id)
       session_id = Session.current_id
       type_id    = Lookup.id(:resolution_types, res[:type])
@@ -451,7 +522,17 @@ module CombatTracker
       end
     end
 
-    def persist_flares(flares, atk_id, seq, tgt, session_id)
+    # Persists flare events associated with an attack.
+    #
+    # @param flares [Array<Hash>] the flare events to persist.
+    # @param atk_id [Integer] the ID of the attack.
+    # @param seq [Integer] the sequence number of the attack.
+    # @param tgt [Hash] the target creature data.
+    # @param session_id [String] the ID of the current session.
+    # @return [void] returns nothing.
+    # @example
+    #   persist_flares([{ name: "Fire", damage: 5, crit: { type: "lightning", location: "nerves", rank: 6 } }], 1, 1, "session_123")
+    def persist_flares(flares, atk_id, seq, session_id)
       flares.each_with_index do |fl, i|
         flare_event_id = CombatTracker::DebugInsert.insert(:flare_events, {
             session_id:      session_id,
@@ -479,6 +560,15 @@ module CombatTracker
       end
     end
 
+    # Persists lodged events associated with an attack.
+    #
+    # @param lodged [String] the lodged data.
+    # @param atk_id [Integer] the ID of the attack.
+    # @param ci_id [Integer] the ID of the creature instance.
+    # @param time [Time] the time the lodged event occurred.
+    # @return [void] returns nothing.
+    # @example
+    #   persist_lodged("right eye", 1, 1, Time.now)
     def persist_lodged(lodged, atk_id, ci_id, time)
       Log.log(:DEBUG, "LODG", "Lodged is #{lodged}.")
       CombatTracker::DebugInsert.insert(:lodged_events, {
@@ -492,7 +582,7 @@ module CombatTracker
   end
 
   # ------------------------------------------------------------
-  # Downstream buffer hook – segments by prompt & queues chunks
+  # Downstream buffer hook ? segments by prompt & queues chunks
   # ------------------------------------------------------------
   DOWNSTREAM_HOOK_ID = 'CombatTracker::downstream'
   PROCESS_QUEUE = Queue.new
