@@ -96,10 +96,10 @@ INSERT OR IGNORE INTO critical_types (id, name) VALUES
   (12, 'PUNCTURE'),
   (13, 'SLASH'),
   (14, 'STEAM'),
-  (15, 'UCS_GRAPPLE'),
-  (16, 'UCS_JAB'),
-  (17, 'UCS_KICK'),
-  (18, 'UCS_PUNCH'),
+  (15, 'UCS-GRAPPLE'),
+  (16, 'UCS-JAB'),
+  (17, 'UCS-KICK'),
+  (18, 'UCS-PUNCH'),
   (19, 'UNBALANCE'),
   (20, 'VACUUM');
 
