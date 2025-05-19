@@ -1,3 +1,17 @@
+=begin
+  CombatTracker_Parser.lic
+
+        author: Nisugi
+  contributors: Nisugi
+          game: Gemstone
+          tags: hunting, combat, tracking
+       version: 0.1
+
+  Change Log:
+  v0.1
+    - Alpha release
+=end
+
 module CombatTracker
   module Parser
     # ---- helpers -------------------------------------------------------
@@ -223,13 +237,13 @@ module CombatTracker
     RESOLUTION_DEFS = [
       ResolutionDef.new(:as_ds, [/AS: (?<AS>[\+\-\d]+) vs DS: (?<DS>[\+\-\d]+) with AvD: (?<AvD>[\+\-\d]+) \+ d\d+ roll: (?<roll>[\+\-\d]+) \= (?<result>[\+\-\d]+)/]).freeze,
       ResolutionDef.new(:cs_td, [
-                          /CS: (?<CS>[\+\-\d]+) \- TD: (?<TD>[\+\-\d]+) \+ CvA: (?<CvA>[\+\-\d]+) \+ d\d+\: (?<roll>[\+\-\d]+) \=\= (?<result>[\+\-\d]+)/,
-                          /CS: (?<CS>[\+\-\d]+) \- TD: (?<TD>[\+\-\d]+) \+ CvA: (?<CvA>[\+\-\d]+) \+ d\d+\: (?<roll>[\+\-\d]+) \+ Bonus: (?<bonus>[\+\-\d]+) \=\= (?<result>[\+\-\d]+)/
-                        ]).freeze,
+        /CS: (?<CS>[\+\-\d]+) \- TD: (?<TD>[\+\-\d]+) \+ CvA: (?<CvA>[\+\-\d]+) \+ d\d+\: (?<roll>[\+\-\d]+) \=\= (?<result>[\+\-\d]+)/,
+        /CS: (?<CS>[\+\-\d]+) \- TD: (?<TD>[\+\-\d]+) \+ CvA: (?<CvA>[\+\-\d]+) \+ d\d+\: (?<roll>[\+\-\d]+) \+ Bonus: (?<bonus>[\+\-\d]+) \=\= (?<result>[\+\-\d]+)/
+      ]).freeze,
       ResolutionDef.new(:smr, [
-                          /\[SMR Result: (?<result>\d+) \(Open d100: (?<roll>[\+\-\d]+), Bonus: (?<bonus>[\-\+\d]+)\)\]/,
-                          /\[SMR Result: (?<result>\d+) \(Open d100: (?<roll>[\+\-\d]+)\)\]/
-                        ]).freeze
+        /\[SMR Result: (?<result>\d+) \(Open d100: (?<roll>[\+\-\d]+), Bonus: (?<bonus>[\-\+\d]+)\)\]/,
+        /\[SMR Result: (?<result>\d+) \(Open d100: (?<roll>[\+\-\d]+)\)\]/
+      ]).freeze
     ].freeze
 
     STATUS_DEFS = [

@@ -1,3 +1,38 @@
+=begin
+  CombatTracker.lic
+    Database based combat event tracking. This is the "recorder", it creates a relational database 
+    that tags creatures to hunting sessions, attacks to creatures, and flares to attacks.
+    
+    The end goal is an data tracking system that can be used to create various reports such as:
+    What happened to creature #8282851?
+    How many creatures did I murder last hunt?
+    What's the average damage of my briar flares?
+      and many more...
+
+
+        author: Nisugi
+  contributors: Nisugi
+          game: Gemstone
+          tags: hunting, combat, tracking
+       version: 0.1
+
+  Change Log:
+  v0.1
+    - Alpha release
+=end
+
+require 'sequel'
+
+unless Script.exists?("combattracker_parser.rb")
+  puts("CombatTracker requires the script combattracker_parser.rb.")
+  puts("Please download it and try again.")
+  puts(";repository download combattracker_parser")
+  exit
+end
+unless defined?(CombatTracker::Parser)
+  Script.run("combattracker_parser")
+end
+
 module CombatTracker
   module Config
     class << self
