@@ -110,7 +110,24 @@ module CombatTracker
     def self.seed!
       conn = DB.conn
 
-      # 1) Resolution types
+      Parser::ATTACK_DEFS.each_with_index do |atk_def|
+        conn[:attack_types]
+          .insert_conflict(target: :name, do_nothing: true)
+          .insert(name: atk_def.name.to_s.upcase)
+      end
+
+      Parser::FLARE_DEFS.each_with_index do |fl_def|
+        conn[:flare_types]
+          .insert_conflict(target: :name, do_nothing: true)
+          .insert(name: fl_def.name.to_s.upcase)
+      end
+
+      Parser::OUTCOME_DEFS.each_with_index do |out_def|
+        conn[:outcome_types]
+          .insert_conflict(target: :name, do_nothing: true)
+          .insert(name: out_def.type.to_s.upcase)
+      end
+
       Parser::RESOLUTION_DEFS.each_with_index do |res_def|
         conn[:resolution_types]
           .insert_conflict(target: :name, do_nothing: true)
@@ -124,19 +141,7 @@ module CombatTracker
           .insert(name: st_def.type.to_s.upcase)
       end
 
-      # 3) Attack types
-      Parser::ATTACK_DEFS.each_with_index do |atk_def|
-        conn[:attack_types]
-          .insert_conflict(target: :name, do_nothing: true)
-          .insert(name: atk_def.name.to_s.upcase)
-      end
 
-      # 4) Flare types
-      Parser::FLARE_DEFS.each_with_index do |fl_def|
-        conn[:flare_types]
-          .insert_conflict(target: :name, do_nothing: true)
-          .insert(name: fl_def.name.to_s.upcase)
-      end
 
       Log.log(:info, "DBSEED", "Seeded lookup tables from Parser defs")
     end
@@ -148,7 +153,7 @@ module CombatTracker
   # ------------------------------------------------------------
   module DebugInsert
     def self.insert(table, row)
-      Log.log(:DEBUG, "DB-INS", "-> #{table}: #{row.inspect}")
+      Log.log(:DEBUG, "DB-INS", "-> #{table}: #{row.inspect}") unless table == :resolution_components
       DB.conn[table].insert(row)
     rescue SQLite3::ConstraintException => e
       Log.log(:ERROR, "DB-INS", "FAILED #{table}: #{e.class}: #{e.message}")
@@ -177,6 +182,10 @@ module CombatTracker
   module Session
     extend self
 
+    @id = nil
+    @seq = 0
+    @last_seen = nil
+
     def current_id = ensure_session!
     def next_sequence = ensure_session! && (@seq += 1)
 
@@ -186,9 +195,16 @@ module CombatTracker
       now  = Time.now
       char = defined?(Char) ? Char.name : 'Unknown'
 
+      if @id && !DB.conn[:combat_sessions].where(id: @id).count.positive?
+        Log.log(:INFO, "SESSION", "Session #{@id} not found in database, resetting state")
+        @id = nil
+        @seq = 0
+      end
+
       if @id.nil? || now - (@last_seen || 0) > Config.session_timeout
         DB.conn[:combat_sessions].where(id: @id).update(ended_at: now) if @id
         @id  = DB.conn[:combat_sessions].insert(character_name: char, started_at: now, last_event_at: now)
+        raise "Failed to create session" unless DB.conn[:combat_sessions].where(id: @id).count > 0
         @seq = 0
       else
         DB.conn[:combat_sessions].where(id: @id).update(last_event_at: now)
@@ -282,6 +298,8 @@ module CombatTracker
           current = init_event(a)
         elsif current && (r = Parser.parse_resolution(ln))
           current[:resolution] = r
+        elsif current && (r = Parser.parse_outcome(ln))
+          current[:outcome] = r
         elsif current && (s = Parser.parse_status(ln))
           current[:statuses] << s
         elsif current && (f = Parser.parse_flare(ln))
@@ -321,6 +339,13 @@ module CombatTracker
       seq        = Session.next_sequence
       tgt        = ev[:target]
       ci_id      = upsert_creature(session_id, tgt) if tgt[:id]
+      
+      begin
+        outcome_id = Lookup.id(:outcome_types, ev[:outcome])
+      rescue
+        Log.log(:VERBOSE, "OUTCOME", "Unknown outcome: #{ev[:outcome]}, defaulting to HIT")
+        outcome_id = 1
+      end
 
       attack_id = CombatTracker::DebugInsert.insert(:attack_events, {
         session_id:           session_id,
@@ -332,13 +357,19 @@ module CombatTracker
         occurred_at:          Time.now,
       })
 
-      CombatTracker::DebugInsert.insert(:damage_components, {
-        attack_id:            attack_id,
-        location_id:          Lookup.id(:locations, ev.dig(:crit, :location)),
-        damage:               ev[:damage],
-        critical_type:        Lookup.id(:critical_types, ev.dig(:crit, :type)),
-        critical_rank:        ev.dig(:crit, :rank),
-      })
+      damage_component = {
+        attack_id: attack_id,
+        damage:    ev[:damage],
+      }
+
+      if ev[:crit] && ev[:crit][:type] && outcome_id == 1
+        damage_component[:location_id] = Lookup.id(:locations, ev.dig(:crit, :location))
+        damage_component[:critical_type] = Lookup.id(:critical_types, ev.dig(:crit, :type))
+        damage_component[:critical_rank] = ev.dig(:crit, :rank)
+      else
+        Log.log(:WARN, "CRIT", "No crit message detected for attack #{attack_id}.") if outcome_id == 1
+      end
+      CombatTracker::DebugInsert.insert(:damage_components, damage_component)
 
       persist_statuses(ev[:statuses], attack_id, session_id)
       persist_resolution(ev[:resolution], attack_id, seq, session_id) if ev[:resolution]
@@ -360,12 +391,12 @@ module CombatTracker
     def persist_statuses(sts, atk_id, session_id)
       now = Time.now
       sts.each do |st|
-        DB.conn[:status_events].insert(
+        CombatTracker::DebugInsert.insert(:status_events, {
           applied_by_attack: atk_id,
           status_type:       Lookup.id(:status_types, st),
           started_at:        now,
           ended_at:          nil
-        )
+        })
       end
     end
 
@@ -385,18 +416,18 @@ module CombatTracker
       }
 
       # insert and grab its PK
-      res_id = DB.conn[:attack_resolutions].insert(row)
+      res_id = CombatTracker::DebugInsert.insert(:attack_resolutions, row)
 
       # now persist the components as before
       res[:data].each do |k, v|
         next if %i[total roll].include?(k)
-        DB.conn[:resolution_components].insert(
+        CombatTracker::DebugInsert.insert(:resolution_components, {
           session_id:      session_id,
           sequence:        seq,
           resolution_id:   res_id,
           component_name:  k.to_s.upcase,
           component_value: v.to_i
-        )
+        })
       end
     end
 
@@ -412,13 +443,18 @@ module CombatTracker
           })
         
         if fl[:damaging]
-          CombatTracker::DebugInsert.insert(:damage_components, {
+          damage_component = {
             flare_id:        flare_event_id,
-            location_id:     Lookup.id(:locations, fl.dig(:crit, :location)),
             damage:          fl[:damage],
-            critical_type:   Lookup.id(:critical_types, fl.dig(:crit, :type)),
-            critical_rank:   fl.dig(:crit, :rank)
-          })
+          }
+          if fl[:crit] && fl[:crit][:type]
+            damage_component[:location_id] = Lookup.id(:locations, fl.dig(:crit, :location))
+            damage_component[:critical_type] = Lookup.id(:critical_types, fl.dig(:crit, :type))
+            damage_component[:critical_rank] = fl.dig(:crit, :rank)
+          else
+            Log.log(:WARN, "CRIT", "No crit message detected for flare #{flare_event_id}.")
+          end
+          CombatTracker::DebugInsert.insert(:damage_components, damage_component)
         end
       end
     end
@@ -437,9 +473,7 @@ module CombatTracker
 
   segment_buffer = proc do |server_string|
     CombatTracker.buffer << server_string
-    Log.log(:VERBOSE, "SEG", "buffer << #{server_string}")
     if server_string =~ /<prompt time="\d+">/
-      Log.log(:DEBUG, "SEG", "[CB] prompt is queuing #{CombatTracker.buffer.size} lines")
       PROCESS_QUEUE << CombatTracker.buffer.shift(CombatTracker.buffer.size)
     end
     server_string

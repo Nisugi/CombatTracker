@@ -67,23 +67,19 @@ INSERT OR IGNORE INTO locations (id, name) VALUES
   (2, 'BACK'),
   (3, 'CHEST'),
   (4, 'HEAD'),
-  (5, 'LEFTARM'),
-  (6, 'LEFTEYE'),
-  (7, 'LEFTFOOT'),
-  (8, 'LEFTHAND'),
-  (9, 'LEFTLEG'),
+  (5, 'LEFT ARM'),
+  (6, 'LEFT EYE'),
+  (7, 'LEFT FOOT'),
+  (8, 'LEFT HAND'),
+  (9, 'LEFT LEG'),
   (10, 'NECK'),
   (11, 'NERVES'),
-  (12, 'RIGHTARM'),
-  (13, 'RIGHTEYE'),
-  (14, 'RIGHTFOOT'),
-  (15, 'RIGHTHAND'),
-  (16, 'RIGHTLEG');
+  (12, 'RIGHT ARM'),
+  (13, 'RIGHT EYE'),
+  (14, 'RIGHT FOOT'),
+  (15, 'RIGHT HAND'),
+  (16, 'RIGHT LEG');
 
-INSERT OR IGNORE INTO resolution_types (id, name) VALUES
-  (1, 'AS_DS'),
-  (2, 'CS_TD'),
-  (3, 'SMR');
 
 INSERT OR IGNORE INTO critical_types (id, name) VALUES
   (1, 'ACID'),
@@ -95,7 +91,7 @@ INSERT OR IGNORE INTO critical_types (id, name) VALUES
   (7, 'GRAPPLE'),
   (8, 'IMPACT'),
   (9, 'LIGHTNING'),
-  (10, 'NON_CORPOREAL'),
+  (10, 'NON-CORPOREAL'),
   (11, 'PLASMA'),
   (12, 'PUNCTURE'),
   (13, 'SLASH'),
@@ -238,7 +234,7 @@ CREATE TABLE flare_events (
     flare_type_id   INTEGER REFERENCES flare_types(id),
     attack_id       INTEGER REFERENCES attack_events(id) ON DELETE CASCADE,
     flare_type      INTEGER REFERENCES flare_types(id),
-    is_fatal        BOOLEAN DEFAULT FALSE,
+    is_fatal        BOOLEAN DEFAULT FALSE
 );
 CREATE INDEX idx_flares_session_seq ON flare_events(session_id, attack_sequence);
 CREATE INDEX idx_flare_events_attack_id ON flare_events(attack_id);

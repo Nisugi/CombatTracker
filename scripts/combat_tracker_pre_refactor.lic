@@ -1,0 +1,1212 @@
+require 'sequel'
+require 'digest'
+require 'terminal-table'
+
+module CombatTracker
+  module Log
+    LEVELS = %i[VERBOSE DEBUG INFO WARN ERROR]
+    @level = :INFO
+
+    class << self
+      attr_accessor :level
+    end
+
+    def self.log(level, context, msg)
+      return if LEVELS.index(level) < LEVELS.index(@level)
+      puts "[CB] #{level.to_s.ljust(5)} [#{context}] #{msg}"
+    end
+  end
+  # CombatTracker::Log.level = :DEBUG
+
+  module CombatConfig
+    @session_timeout = 180 # seconds, auto-close after 3 minutes of inactivity
+    @flush_interval = 300  # seconds, bulk write to DB every 5 minutes
+    @max_cache_rows = 10_000 # trigger early flush if cache gets too large
+    
+    class << self
+      attr_accessor :session_timeout, :flush_interval, :max_cache_rows
+    end
+  end
+
+    # Combat session management
+  module CombatSession
+    @current_id = nil
+    @last_event_time = Time.at(0)
+    @last_sequence = 0
+
+    def self.ensure_session!
+      char_name = defined?(Char) ? Char.name : 'Unknown'
+      
+      if Time.now - @last_event_time > CombatConfig.session_timeout || @current_id.nil?
+        DB[:combat_sessions].where(id: @current_id).update(ended_at: Time.now) if @current_id
+        @current_id = DB[:combat_sessions].insert(
+          character_name: char_name,
+          started_at: Time.now,
+          last_event_at: Time.now
+        )
+        @last_sequence = 0
+      else
+        DB[:combat_sessions].where(id: @current_id).update(last_event_at: Time.now)
+      end
+      
+      @last_event_time = Time.now
+      @current_id
+    end
+    
+    def self.current_id
+      ensure_session!
+    end
+
+    def self.next_sequence
+      ensure_session!
+      @last_sequence += 1
+    end
+  end
+
+  # Initialize DB connection
+  DB_PATH = File.join(DATA_DIR, XMLData.game, Char.name, "combat.db")
+  DB = Sequel.sqlite(
+    DB_PATH,
+    timeout: 10_000, # ms
+    journal_mode: :wal,
+    synchronous: :normal
+  )
+
+  # Set up DB if it's empty
+  module SchemaLoader
+    SCHEMA_PATH = File.expand_path('db_schema.sql', DATA_DIR)
+
+    def self.ensure!
+      return unless DB.tables.empty?
+      sql = File.read(SCHEMA_PATH)
+      DB.run(sql)
+      puts "-- Schema created from #{SCHEMA_PATH}"
+    end
+  end
+  SchemaLoader.ensure!
+
+
+  def self.last_session
+    DB[:combat_sessions]
+      .order(Sequel.desc(:started_at))
+      .first
+  end
+
+  def self.events_for_last_session
+    sess = last_session
+    return [] unless sess
+    DB[:attack_events]
+      .where(session_id: sess[:id])
+      .order(:sequence)
+      .all
+  end
+
+  # Cache for in-memory storage before bulk writes
+  module CombatStore
+    CACHE = Hash.new { |h,k| h[k] = [] }
+    MUTEX = Mutex.new
+    
+    def self.push(table, row)
+      Log.log(:DEBUG, "STORE", "[CB] push -> #{table}: #{row.inspect}")
+      early = false
+      MUTEX.synchronize do
+        CACHE[table] << row
+        early = CACHE[table].size >= CombatConfig.max_cache_rows
+      end
+      DBFlusher.flush! if early
+    end
+  end
+
+  # Handle bulk writes to the database
+  module DBFlusher
+    TABLES = %i[creature_instances attack_events attack_resolutions resolution_components defense_events damage_components status_events flare_events projectiles]
+    
+    def self.flush!
+      Log.log(:DEBUG, "FLUSH", "[CB] flushing batches: #{CombatStore::CACHE.keys.inspect}")
+      batches = nil
+      CombatStore::MUTEX.synchronize do 
+        batches = CombatStore::CACHE.dup
+      end
+      return if batches.empty?
+      
+      DB.transaction do
+        TABLES.each do |t|
+          rows = batches[t] or next
+          if t == :creature_instances
+            rows = rows
+              .group_by { |r| [r[:session_id], r[:exist_id]] }
+              .map    { |(_sess, exist), group| group.max_by { |r| r[:last_seen_at] } }
+          end
+
+          begin
+            if t == :attack_resolutions
+              rows = rows
+                .group_by { |r| [r[:session_id], r[:sequence]] }
+                .map    { |_key, grp| grp.first }
+              DB[t].multi_insert(rows, slice: 1_000)
+            else
+              DB[t].multi_insert(rows, slice: 1_000)
+            end
+          rescue => e
+            Log.log(:DEBUG, "FLUSH" "[CB] insert into #{t} failed: #{e.class}: #{e.message}")
+            CombatStore::MUTEX.synchronize { CombatStore::CACHE.clear }
+            raise
+          end
+        end
+      end
+      CombatStore::MUTEX.synchronize do
+        batches.each_key { |tbl| CombatStore::CACHE[tbl].shift(batches[tbl].size) }
+        # or simply .clear if you don't care about preserving other
+        # tables in the cache beyond this flush.
+      end
+    rescue => e
+      Log.log(:DEBUG, "FLUSH", "[CB] DB flush failed: #{e.message}")
+      log_error "DB flush failed: #{e}"
+      # merge rows back so they aren't lost
+      CombatStore::MUTEX.synchronize do
+        batches.each { |k,v| CombatStore::CACHE[k].concat(v) }
+      end
+    end
+  end
+
+  def self.creature_hash(exist_id, noun, first_seen)
+    Digest::SHA1.hexdigest("#{exist_id}-#{first_seen.to_i}-#{noun}")
+  end
+
+  Thread.new do
+    loop do
+      sleep CombatTracker::CombatConfig.flush_interval
+      begin
+        CombatTracker::DBFlusher.flush!
+      rescue => e
+        CombatTracker::DBFlusher.log_error("Scheduled DB flush failed: #{e}")
+      end
+    end
+  end
+
+  class CombatReporter
+    def initialize
+      # Make sure any pending writes are flushed to DB
+      DBFlusher.flush!
+    end
+    
+    # Get all combat sessions
+    def list_sessions(limit = 10)
+      DB[:combat_sessions]
+        .reverse_order(:started_at)
+        .limit(limit)
+        .select(:id, :character_name, :started_at, :ended_at)
+        .all
+    end
+    
+    # Get session summary - counts of creatures, attacks, etc.
+    def session_summary(session_id)
+      creature_count = DB[:creature_instances].where(session_id: session_id).count
+      attack_count = DB[:attack_events].where(session_id: session_id).count
+      
+      flare_counts = DB[:flare_events]
+        .join(:attack_events, id: :attack_id)
+        .where(Sequel[:attack_events][:session_id] => session_id)
+        .group_and_count(:flare_type)
+        .all
+        
+      damage_total = DB[:damage_components]
+        .join(:attack_events, id: :attack_id)
+        .where(Sequel[:attack_events][:session_id] => session_id)
+        .sum(:damage) || 0
+      
+      session_data = DB[:combat_sessions].where(id: session_id).first
+      duration = session_data[:ended_at] ? 
+                (session_data[:ended_at] - session_data[:started_at]).to_i : 
+                (Time.now - session_data[:started_at]).to_i
+      
+      {
+        session_id: session_id,
+        character_name: session_data[:character_name],
+        started_at: session_data[:started_at],
+        ended_at: session_data[:ended_at],
+        duration_seconds: duration,
+        creature_count: creature_count,
+        attack_count: attack_count,
+        damage_total: damage_total,
+        flare_counts: flare_counts
+      }
+    end
+    
+    # Get all creatures from a session
+    def session_creatures(session_id)
+      DB[:creature_instances]
+        .left_join(
+          :creature_types,
+          Sequel[:creature_types][:name] => Sequel[:creature_instances][:noun]
+        )
+        .where(Sequel[:creature_instances][:session_id] => session_id)
+        .select(
+          Sequel[:creature_instances][:id].        as(:creature_id),
+          Sequel[:creature_instances][:exist_id].  as(:exist_id),      # ← new
+          Sequel[:creature_instances][:noun].      as(:type_name),
+          Sequel[:creature_instances][:display_name],
+          Sequel[:creature_instances][:first_seen_at],
+          Sequel[:creature_instances][:last_seen_at]
+        )
+        .order(Sequel[:creature_instances][:first_seen_at])
+        .all
+    end
+
+    # Get all attacks on a specific creature
+    def creature_attacks(creature_id)
+      DB[:attack_events]
+        .join(:attack_types, id: :attack_type)
+        .where(creature_id: creature_id)
+        .select(
+          Sequel[:attack_events][:id],
+          Sequel[:attack_types][:name].as(:attack_type),
+          Sequel[:attack_events][:attack_name].as(:verb),
+          Sequel[:attack_events][:occurred_at],
+          Sequel[:attack_events][:attack_damage].as(:damage)
+        )
+        .order(:occurred_at)
+        .all
+    end
+    
+    # Get damage components for an attack
+    def attack_damage(attack_id)
+      DB[:damage_components]
+        .where(Sequel[:damage_components][:attack_id] => attack_id)
+        .left_join(:locations,       id: :location_id)
+        .left_join(:critical_types,  id: :critical_type)
+        .select(
+          Sequel[:damage_components][:id].          as(:id),
+          Sequel[:damage_components][:damage].      as(:damage),
+          Sequel[:locations][:name].                as(:location),
+          Sequel[:critical_types][:name].           as(:crit_type),
+          Sequel[:damage_components][:critical_rank].as(:critical_rank)
+        )
+        .all
+    end
+    
+    # Get flares for an attack
+    def attack_flares(attack_id)
+      DB[:flare_events]
+        .where(attack_id: attack_id)
+        .left_join(:flare_types,    id: :flare_type)
+        .left_join(:locations,      id: :location_id)
+        .left_join(:critical_types, id: :critical_type)
+        .select(
+          Sequel[:flare_events][:id].as(:flare_id),
+          Sequel[:flare_types][:name].as(:flare_type),
+          Sequel[:flare_events][:damage],
+          Sequel[:critical_types][:name].as(:crit_type),
+          Sequel[:locations][:name].as(:location),
+          Sequel[:flare_events][:critical_rank]
+        )
+        .all
+    end
+
+    # Get status effects for a creature
+    def creature_statuses(creature_id)
+      DB[:status_events]
+        .where(Sequel[:status_events][:creature_id] => creature_id)
+        .left_join(:status_types, id: :status_type)
+        .left_join(:locations,    id: :location_id)
+        .select(
+          Sequel[:status_events][:id].         as(:id),
+          Sequel[:status_types][:name].        as(:status_type),
+          Sequel[:locations][:name].           as(:location),
+          Sequel[:status_events][:started_at]. as(:started_at),
+          Sequel[:status_events][:ended_at].   as(:ended_at),
+          Sequel[:status_events][:stack_count].as(:stack_count)
+        )
+        .order(Sequel[:status_events][:started_at])
+        .all
+    end
+    
+    # Get flare statistics - where each flare type landed and damage stats
+    def flare_location_stats(session_id = nil, flare_type_name = nil)
+      ds = DB[:flare_events]
+        .join(
+          :flare_types,
+          Sequel[:flare_types][:id] => Sequel[:flare_events][:flare_type]
+        )
+        .join(
+          :attack_events,
+          Sequel[:attack_events][:id] => Sequel[:flare_events][:attack_id]
+        )
+        .left_join(
+          :locations,
+          Sequel[:locations][:id] => Sequel[:flare_events][:location_id]
+        )
+
+      # Apply filters
+      ds = ds.where(Sequel[:attack_events][:session_id] => session_id)     if session_id
+      ds = ds.where(Sequel[:flare_types][:name]         => flare_type_name) if flare_type_name
+
+      ds
+        .group(Sequel[:flare_types][:name], Sequel[:locations][:name])
+        .select(
+          Sequel[:flare_types][:name].as(:flare_type),
+          Sequel[:locations][:name].    as(:location),
+          Sequel.function(:count, '*'). as(:count),
+          Sequel.function(:avg, Sequel[:flare_events][:damage]).      as(:avg_damage),
+          Sequel.function(:avg, Sequel[:flare_events][:critical_rank]).as(:avg_crit_rank),
+          Sequel.function(:max, Sequel[:flare_events][:damage]).      as(:max_damage)
+        )
+        .order(Sequel.desc(:count))
+        .all
+    end
+    
+    # Get critical hit statistics - type and location distribution
+    def critical_stats(session_id = nil)
+      dc = DB[:damage_components]
+        .join(:attack_events,    Sequel[:attack_events][:id] => Sequel[:damage_components][:attack_id])
+        .join(:locations,        Sequel[:locations][:id]      => Sequel[:damage_components][:location_id])
+        .join(:critical_types,   Sequel[:critical_types][:id] => Sequel[:damage_components][:critical_type])
+        .where(Sequel[:attack_events][:session_id] => session_id)
+        .select(
+          Sequel[:critical_types][:name].               as(:crit_type),
+          Sequel[:locations][:name].                    as(:location),
+          Sequel[:damage_components][:critical_rank].   as(:critical_rank)
+        )
+
+      fe = DB[:flare_events]
+        .join(:attack_events,    Sequel[:attack_events][:id] => Sequel[:flare_events][:attack_id])
+        .join(:locations,        Sequel[:locations][:id]      => Sequel[:flare_events][:location_id])
+        .join(:critical_types,   Sequel[:critical_types][:id] => Sequel[:flare_events][:critical_type])
+        .where(Sequel[:attack_events][:session_id] => session_id)
+        .select(
+          Sequel[:critical_types][:name].             as(:crit_type),
+          Sequel[:locations][:name].                  as(:location),
+          Sequel[:flare_events][:critical_rank].      as(:critical_rank)
+        )
+
+      # Use Sequel.union (class-level) to make a UNION ALL
+      union_ds = Sequel.union(dc, fe, all: true).as(:all_crits)
+
+      # Now group/aggregate over that derived table
+      DB[union_ds]
+        .group(Sequel[:all_crits][:crit_type], Sequel[:all_crits][:location])
+        .select(
+          Sequel[:all_crits][:crit_type],
+          Sequel[:all_crits][:location],
+          Sequel.function(:count, '*').as(:hit_count),
+          Sequel.function(:avg,   Sequel[:all_crits][:critical_rank]).as(:avg_rank),
+          Sequel.function(:max,   Sequel[:all_crits][:critical_rank]).as(:max_rank)
+        )
+        .order(Sequel.desc(:hit_count))
+        .all
+    end
+
+    # Get status effect uptime statistics
+    def status_uptime_stats(session_id = nil)
+      now = Time.now
+
+      ds = DB[:status_events]
+        .join(
+          :status_types,
+          Sequel[:status_types][:id] => Sequel[:status_events][:status_type]
+        )
+        .join(
+          :creature_instances,
+          Sequel[:creature_instances][:id] => Sequel[:status_events][:creature_id]
+        )
+
+      ds = ds.where(Sequel[:creature_instances][:session_id] => session_id) if session_id
+
+      ds
+        .select(
+          Sequel[:status_types][:name].as(:status_type),
+          Sequel.function(:count, '*').       as(:count),
+          Sequel.function(
+            :avg,
+            Sequel.+(
+              Sequel.case({ Sequel[:status_events][:ended_at] => now },
+                          Sequel[:status_events][:ended_at]),
+              Sequel.-(Sequel[:status_events][:started_at], 0)
+            )
+          ).as(:avg_duration),
+          Sequel.function(
+            :max,
+            Sequel.+(
+              Sequel.case({ Sequel[:status_events][:ended_at] => now },
+                          Sequel[:status_events][:ended_at]),
+              Sequel.-(Sequel[:status_events][:started_at], 0)
+            )
+          ).as(:max_duration)
+        )
+        .group(Sequel[:status_types][:name])
+        .order(Sequel.desc(:count))
+        .all
+    end
+    
+    # Get arrow stuck statistics - where arrows are sticking
+    def arrow_stuck_stats(session_id = nil)
+      ds = DB[:status_events]
+        # only look at the “arrow stuck” status
+        .join(
+          :status_types,
+          Sequel[:status_types][:id] => Sequel[:status_events][:status_type]
+        )
+        # bring in the creature so we can filter by session
+        .join(
+          :creature_instances,
+          Sequel[:creature_instances][:id] => Sequel[:status_events][:creature_id]
+        )
+        # join to locations via the event’s own location_id
+        .join(
+          :locations,
+          Sequel[:locations][:id] => Sequel[:status_events][:location_id]
+        )
+        .where(Sequel[:status_types][:name] => 'ARROW_STUCK')
+
+      # filter by session if given
+      ds = ds.where(Sequel[:creature_instances][:session_id] => session_id) if session_id
+
+      ds
+        .group(Sequel[:locations][:name])
+        .select(
+          Sequel[:locations][:name].as(:location),
+          Sequel.function(:count, '*').as(:stuck_count)
+        )
+        .order(Sequel.desc(:stuck_count))
+        .all
+    end
+    
+    # Generate a full combat report for a session
+    def generate_combat_report(session_id)
+      {
+        summary:             session_summary(session_id),
+        creatures:           session_creatures(session_id),
+        flare_statistics:    flare_location_stats(session_id),
+        critical_statistics: critical_stats(session_id),
+        status_statistics:   status_uptime_stats(session_id),
+        arrow_statistics:    arrow_stuck_stats(session_id)
+      }
+    end
+
+    # My Reports
+    def nested_session_report(session_id)
+      attacks = DB[:attack_events].where(session_id: session_id).all
+      attacks_by_creature = attacks.group_by { |atk| atk[:creature_instance_id] }
+
+      damage = DB[:damage_components]
+        .where(attack_id: attacks.map { |a| a[:id] })
+        .all
+      damage_by_attack = damage.group_by { |d| d[:attack_id] }
+
+      flares = DB[:flare_events]
+        .where(attack_id: attacks.map { |a| a[:id] })
+        .left_join(:locations,      id: :location_id)
+        .left_join(:critical_types, Sequel[:critical_types][:id] => Sequel[:flare_events][:critical_type])
+        .select_all(:flare_events)
+        .select_append(
+          Sequel[:locations][:name]      .as(:location),
+          Sequel[:critical_types][:name] .as(:crit_type)
+        )
+        .all
+
+      flares_by_attack = flares.group_by { |f| f[:attack_id] }
+
+      # 2) Build creature hashes
+      creatures = session_creatures(session_id).map do |ci|
+        {
+          creature_id:   ci[:creature_id],
+          exist_id:      ci[:exist_id],
+          type_name:     ci[:type_name],
+          display_name:  ci[:display_name],
+          first_seen_at: ci[:first_seen_at],
+          last_seen_at:  ci[:last_seen_at],
+          attacks:       []
+        }
+      end
+      creatures_index = creatures.map { |c| [c[:creature_id], c] }.to_h
+
+      # 3) Attach attacks → damage → flares
+      attacks.each do |atk|
+        entry = {
+          id:     atk[:id],
+          name:   atk[:attack_name],                 # ← add this
+          damage: atk[:attack_damage],
+          crit:   {
+            type:     atk[:attack_crit_type],
+            location: atk[:attack_crit_location],    # ← and this
+            rank:     atk[:attack_crit_rank]
+          },
+          flares: []
+        }
+
+        Array(flares_by_attack[atk[:id]]).each do |f|
+          entry[:flares] << {
+            name:   f[:flare_name],
+            damage: f[:damage].to_i.positive? ? f[:damage] : '-',
+            crit:   if f[:crit_type]
+                      {
+                        type:     f[:crit_type].downcase,
+                        location: f[:location].downcase,
+                        rank:     f[:critical_rank]
+                      }
+                    else
+                      nil
+                    end
+          }
+        end
+
+        Array(damage_by_attack[atk[:id]]).each do |d|
+          entry[:damage_components] ||= []
+          entry[:damage_components] << {
+            location:  d[:location_id],
+            crit_type: d[:critical_type],
+            crit_rank: d[:critical_rank],
+            damage:    d[:damage]
+          }
+        end
+
+        creatures_index[atk[:creature_instance_id]][:attacks] << entry
+      end
+
+      # 4) Build and return the full report *after* the loop
+      {
+        session:   session_summary(session_id),
+        creatures: creatures
+      }
+    end
+
+    def print_session_report(session_id = nil)
+      session_id ||= CombatTracker.last_session[:id]
+      report   = nested_session_report(session_id)
+      session  = report[:session]
+      puts "Combat Report for Session ##{session[:session_id]} (#{session[:character_name]})"
+      puts "Started: #{session[:started_at]}   Duration: #{session[:duration_seconds]}s"
+      puts "-" * 60
+
+      report[:creatures].each do |cre|
+        puts "\nCreature: #{cre[:display_name]} (##{cre[:exist_id]})"
+
+        # build a combined list of attacks+flares
+        rows = []
+        cre[:attacks].each do |atk|
+          # Attack row
+          atk_dmg = atk[:damage].to_i.positive? ? atk[:damage] : '-'
+          if atk[:crit] && atk[:crit][:type]
+            atk_crit = [atk[:crit][:type], atk[:crit][:location], atk[:crit][:rank]].join(', ')
+          else
+            atk_crit = '-'
+          end
+          rows << [ atk[:name], atk_dmg, atk_crit ]
+
+          # Then that attack's flares
+          atk[:flares].each do |f|
+            f_dmg = f[:damage].to_i.positive? ? f[:damage] : '-'
+            if f[:crit] && f[:crit][:type]
+              f_crit = [f[:crit][:type], f[:crit][:location], f[:crit][:rank]].join(', ')
+            else
+              f_crit = '-'
+            end
+            rows << [ "#{f[:name]}", f_dmg, f_crit ]
+          end
+
+          # blank separator between attacks
+          rows << :separator
+        end
+
+        rows.pop if rows.last == :separator  # remove trailing
+
+        table = Terminal::Table.new(
+          headings: ['Name','Damage','Crit'],
+          rows:     rows
+        )
+        puts table
+      end
+    end
+
+    def print_creature_report(target_exist_id)
+      # 1) Flush any pending writes so our queries see all the rows
+      DBFlusher.flush!
+
+      # 2) Find the creature instance
+      ci = DB[:creature_instances]
+        .where(exist_id: target_exist_id)
+        .order(Sequel.desc(:first_seen_at))
+        .first
+
+      unless ci
+        puts "No creature found with exist_id=#{target_exist_id}"
+        return
+      end
+
+      session_id = ci[:session_id]
+      puts "Creature Report for #{ci[:display_name]} (##{ci[:exist_id]})"
+      puts "  Session ##{session_id}   Seen from #{ci[:first_seen_at]} to #{ci[:last_seen_at]}"
+      puts "-" * 50
+
+      # 3) Attacks on that creature
+      attacks = DB[:attack_events]
+        .where(session_id: session_id, creature_instance_id: ci[:id])
+        .order(:sequence)
+        .all
+
+      if attacks.empty?
+        puts "  (no attacks recorded for this creature in that session)"
+        return
+      end
+
+      attacks.each do |atk|
+        # Attack header
+        name = atk[:attack_name]
+        dmg  = atk[:attack_damage].to_i.positive? ? atk[:attack_damage] : '-'
+        crit = if atk[:attack_crit_type]
+                [atk[:attack_crit_type], atk[:attack_crit_location], atk[:attack_crit_rank]].join(', ')
+              else
+                '-'
+              end
+        puts "→ Attack: #{name.ljust(15)}  Damage: #{dmg.to_s.rjust(3)}  Crit: #{crit}"
+
+        # 3a) Damage components (unchanged)
+        comps = DB[:damage_components]
+          .where(attack_id: atk[:id])
+          .left_join(:locations,      id: :location_id)
+          .left_join(:critical_types, id: :critical_type)
+          .select(
+            :damage_components__damage,
+            Sequel[:locations][:name].as(:loc),
+            Sequel[:critical_types][:name].as(:ctype),
+            :critical_rank
+          )
+          .all
+        comps.each do |d|
+          puts "     • dmg #{d[:damage].to_s.rjust(3)} at #{d[:loc]} crit=#{d[:ctype]}(#{d[:critical_rank]})"
+        end
+
+        # 3b) Flares (unchanged)
+        fls = attack_flares(atk[:id])
+        fls.each do |f|
+          fdmg  = f[:damage].to_i.positive? ? f[:damage] : '-'
+          fcrit = if f[:crit_type]
+                    [f[:crit_type], f[:location], f[:critical_rank]].join(', ')
+                  else
+                    '-'
+                  end
+          puts "     • flare #{f[:flare_type].ljust(15)}  Dmg: #{fdmg.to_s.rjust(3)}  Crit: #{fcrit}"
+        end
+
+        # 3c) Statuses applied by this attack — fix alias lookup
+        sts = DB[:status_events]
+          .where(applied_by_attack: atk[:id])
+          .left_join(
+            :status_types,
+            Sequel[:status_types][:id] => Sequel[:status_events][:status_type]
+          )
+          .select(
+            Sequel[:status_types][:name].as(:status_name),
+            Sequel[:status_events][:started_at]
+          )
+          .all
+
+        sts.each do |s|
+          # use the same alias you gave in `select(...as(:status_name))`
+          puts "     • status #{s[:status_name]} at #{s[:started_at]}"
+        end
+
+        puts "-" * 50
+      end
+
+      # 4) Ongoing statuses on the creature — also fix alias
+      ongoing = DB[:status_events]
+        .where(creature_id: ci[:id], ended_at: nil)
+        .left_join(
+          :status_types,
+          Sequel[:status_types][:id] => Sequel[:status_events][:status_type]
+        )
+        .select(
+          Sequel[:status_types][:name].as(:status_name),
+          Sequel[:status_events][:started_at]
+        )
+        .all
+
+      if ongoing.any?
+        puts "Currently active statuses:"
+        ongoing.each do |s|
+          puts "  - #{s[:status_name]} since #{s[:started_at]}"
+        end
+      end
+    end
+
+  end
+
+  module Parser
+    TARGET_LINK = %r{<a exist="(?<id>\d+)" noun="(?<noun>[^"]+)">(?<name>[^<]+)</a>}
+    ResolutionDef = Struct.new(:type, :patterns).freeze
+    ResolutionDefs = [
+      ResolutionDef.new(:as_ds, [/AS: (?<AS>[\+\-\d]+) vs DS: (?<DS>[\+\-\d]+) with AvD: (?<AvD>[\+\-\d]+) \+ d\d+ roll: (?<roll>[\+\-\d]+) \= (?<result>[\+\-\d]+)/]).freeze,
+      ResolutionDef.new(:cs_td, [
+        /CS: (?<CS>[\+\-\d]+) \- TD: (?<TD>[\+\-\d]+) \+ CvA: (?<CvA>[\+\-\d]+) \+ d\d+\: (?<roll>[\+\-\d]+) \=\= (?<result>[\+\-\d]+)/,
+        /CS: (?<CS>[\+\-\d]+) \- TD: (?<TD>[\+\-\d]+) \+ CvA: (?<CvA>[\+\-\d]+) \+ d\d+\: (?<roll>[\+\-\d]+) \+ Bonus: (?<bonus>[\+\-\d]+) \=\= (?<result>[\+\-\d]+)/
+      ]).freeze,
+      ResolutionDef.new(:smr, [
+        /\[SMR Result: (?<result>\d+) \(Open d100: (?<roll>[\+\-\d]+), Bonus: (?<bonus>[\-\+\d]+)\)\]/,
+        /\[SMR Result: (?<result>\d+) \(Open d100: (?<roll>[\+\-\d]+)\)\]/
+      ]).freeze
+    ].freeze
+    RESOLUTION_LOOKUP = ResolutionDefs
+      .flat_map { |r| r.patterns.map { |rx| [rx, r.type] } }
+      .freeze
+    RESOLUTION_DETECTOR = Regexp.union(RESOLUTION_LOOKUP.map { |rx, _type| rx }).freeze
+
+    StatusDef = Struct.new(:type, :patterns).freeze
+    StatusDefs = [
+      StatusDef.new(:stunned, [/The (?<target>.+?) is stunned!/].freeze),
+      StatusDef.new(:prone, [/It is knocked to the ground!/].freeze),
+      StatusDef.new(:immobilized, [/(?<target>.+?) form is entangled in an unseen force that restricts .+? movement\./].freeze),
+      StatusDef.new(:blind, [/You blinded (?<target>[^!]+)!/].freeze)
+    ].freeze
+    STATUS_LOOKUP = StatusDefs
+      .flat_map { |s| s.patterns.map { |rx| [rx, s.type] } }
+      .freeze
+    STATUS_DETECTOR = Regexp.union(STATUS_LOOKUP.map { |rx, _type| rx }).freeze
+
+    Attack = Struct.new(:name, :patterns).freeze
+    Attacks = [
+      Attack.new(:attack, [/You(?: take aim and)? swing .+? at (?<target>[^!]+)!/].freeze),
+      Attack.new(:fire, [/You(?: take aim and)? fire .+? at (?<target>[^!]+)!/].freeze),
+      Attack.new(:jab, [/You(?: make a precise)? attempt to jab (?<target>[^!]+)!/].freeze),
+      Attack.new(:punch, [/You(?: make a precise)? attempt to punch (?<target>[^!]+)!/].freeze),
+      Attack.new(:kick, [/You(?: make a precise)? attempt to kick (?<target>[^!]+)!/].freeze),
+      Attack.new(:grapple, [/You(?: make a precise)? attempt to grapple (?<target>[^!]+)!/].freeze),
+      Attack.new(:twinhammer, [/You raise your hands high, lace them together and bring them crashing down towards (?<target>[^!]+)!/].freeze),
+      Attack.new(:cripple, [/You reverse your grip on your .+? and dart toward (?<target>.+?) at an angle!/].freeze),
+      Attack.new(:wblade, [
+        /You turn, blade spinning in your hand toward (?<target>[^!]+)!/,
+        /You angle your blade at (?<target>.+?) in a crosswise slash!/,
+        /In a fluid whirl, you sweep your blade at (?<target>[^!]+)!/,
+        /Your blade licks out at (?<target>.+?) in a blurred arc!/
+      ].freeze),
+
+      Attack.new(:natures_fury, [/The surroundings advance upon (?<target>.+?) with relentless fury!/].freeze),
+      Attack.new(:spikethorn, [/Dozens of long thorns suddenly grow out from the ground underneath (?<target>[^!]+)!/].freeze),
+      Attack.new(:sunburst, [/The dazzling solar blaze flashes before (?<target>[^!]+)!/].freeze),
+      Attack.new(:tangleweed, [
+        /The (?<weed>.+?) lashes out violently at (?<target>[^,]+), dragging .+? to the ground!/,
+        /The (?<weed>.+?) lashes out at (?<target>[^,]+), wraps itself around .+? body and entangles .+? on the ground\./
+      ].freeze)
+    ].freeze
+    ATTACK_LOOKUP = Attacks
+      .flat_map { |atk| atk.patterns.map { |rx| [rx, atk.name] } }
+      .freeze
+    ATTACK_DETECTOR = Regexp.union(ATTACK_LOOKUP.map { |rx, _name| rx }).freeze
+
+    Flare = Struct.new(:name, :patterns, :damaging).freeze
+    Flares = [
+      Flare.new(:blink, [/Your .+? suddenly lights up with hundreds of tiny blue sparks!/].freeze, false),
+      Flare.new(:blessings_flourish, [
+        /\*\* A crackling wave arcs across your body, striking (?<target>.+?) with lightning speed!  A spiritual resonance warms your core, lending you renewed strength! \*\*/,
+        /\*\* Shimmering arcs of lightning stream from your hands, colliding with (?<target>.+?) in a rapid burst!  A stirring force ignites within you, augmenting your spirit! \*\*/,
+        /\*\* Sparkling tendrils of energy weave around your limbs, shocking (?<target>.+?) in a bright flare!  The pulse leaves you feeling spiritually emboldened! \*\*/,
+        /\*\* A faint hum courses through you as arcs of electricity coil around your arms, jolting (?<target>.+?) in a vivid burst!  The current resonates with your spirit, boosting your energy! \*\*/,
+        /\*\* You feel a tingling surge channel through your arms, blasting (?<target>.+?) with crackling electricity!  A reassuring feeling of mental acuity settles over you! \*\*/,
+        /\*\* Jagged sparks dance along your open palms, lashing out at (?<target>.+?) in a crackling surge!  Your resolve feels bolstered as the energy courses through you! \*\*/,
+        /\*\* An electrified aura coalesces around you, crackling outward to shock (?<target>[^!]+)!  The charge resonates with your spirit, heightening your prowess! \*\*/,
+        /\*\* Threads of charged light spiral around your arms, striking (?<target>.+?) with a pulsing shock!  A resonant force ripples through you, amplifying your spirit! \*\*/,
+        /\*\* Sparks of crackling energy race along your fingertips, shocking (?<target>.+?) with a brilliant flash!  A surge of spiritual power rushes through your veins! \*\*/,
+        /\*\* A crackling wave arcs across your body, striking (?<target>.+?) with lightning speed!  A spiritual resonance warms your core, lending you renewed strength! \*\*/
+      ].freeze, true),
+      Flare.new(:briar, [/Vines of vicious briars whip out from your [^,]+, raking the \w+ with its thorns\.  The \w+ looks slightly ill as the glistening emerald coating from each briar works itself under its skin\./].freeze, true),
+      Flare.new(:ghezyte, [/\*\* Cords of plasma-veined grey mist seep from your .+? and entangle (?<target>[^,]+), causing .+? to tremble violently! \*\*/].freeze, false),
+      Flare.new(:ensorcell, [/\*\* Necrotic energy from your .+? overflows into you! \*\*/].freeze, false),
+      Flare.new(:arcane_reflex, [/Vital energy infuses you, hastening your arcane reflexes!/].freeze, false),
+      Flare.new(:physical_prowess, [/The vitality of nature bestows you with a burst of strength!/].freeze, false),
+      Flare.new(:terror, [/\*\* A wave of wicked power surges forth from your .+? and fills (?<target>.+?) with terror, .+? form trembling with unmitigated fear! \*\*/].freeze, false),
+      Flare.new(:natures_decay, [
+        /Soot brown specks of leaf mold trail in the wake of (?<target>.+?) movements, distorted by a murky haze\./,
+        /The earthy, sweet aroma clinging to (?<target>.+?) grows more pervasive\./,
+        /An earthy, sweet armoa clings to (?<target>.+?) in a murky haze\./,
+        /An earthy, sweet aroma clings to (?<target>.+?) in a murky haze, accompanied by soot brown specks of leaf mold\./,
+      ].freeze, false),
+      Flare.new(:chameleon_shroud, [/A tenebrous shroud stitches itself into existence around you as you gracefully retreat into the shadows!/].freeze, false)
+    ].freeze
+    FLARE_LOOKUP = Flares
+      .flat_map { |f| f.patterns.map { |rx| [rx, f.name, f.damaging] } }
+      .freeze
+    FLARE_DETECTOR = Regexp.union(FLARE_LOOKUP.map { |rx, _name, _dmg| rx }).freeze
+
+    def self.extract_link(text)
+      if m = TARGET_LINK.match(text)
+        {
+          id:   m[:id].to_i,
+          noun: m[:noun],
+          name: m[:name]
+        }
+      end
+    end
+
+    def self.parse_attack(line)
+      return nil unless ATTACK_DETECTOR.match?(line)
+      ATTACK_LOOKUP.each do |rx, name|
+        if m = rx.match(line)
+          info = { 
+            name: name, 
+            raw:  line.strip 
+          }
+          if m.names.include?('target')
+            raw_t = m[:target]      # e.g. "<pushBold/>a <a exist='…'>…</a><popBold/>"
+            link  = extract_link(raw_t)
+            info[:target] = link || { id: nil, noun: nil, name: raw_t }
+          end
+          return info
+        end
+      end
+      nil
+    end
+
+    def self.parse_resolution(line)
+      return nil unless RESOLUTION_DETECTOR.match?(line)
+      RESOLUTION_LOOKUP.each do |rx, type|
+        if m = rx.match(line)
+          data = m.named_captures.transform_keys(&:to_sym)
+          return { type: type, data: data }
+        end
+      end
+      nil
+    end
+
+    def self.parse_flare(line)
+      return nil unless FLARE_DETECTOR.match?(line)
+      FLARE_LOOKUP.each do |rx, name, damaging|
+        if m = rx.match(line)
+          info = {
+            name:     name,
+            damaging: damaging,
+            raw: line.strip
+          }
+          if m.names.include?('target')
+            raw_t = m[:target]
+            link  = extract_link(raw_t)
+            info[:target] = link || { id: nil, noun: nil, name: raw_t }
+          end
+          return info
+        end
+      end
+      nil
+    end
+
+    def self.parse_status(line)
+      return nil unless STATUS_DETECTOR.match?(line)
+      STATUS_LOOKUP.each do |rx, type|
+        if m = rx.match(line)
+          return type
+        end
+      end
+      nil
+    end
+
+    # Seed our lookup tables
+    # 1) Resolution types
+    ResolutionDefs.each_with_index do |res_def, idx|
+      DB[:resolution_types]
+        .insert_conflict(target: :name, do_nothing: true)
+        .insert(id: idx+1, name: res_def.type.to_s.upcase)
+    end
+
+    # 2) Status types
+    StatusDefs.each_with_index do |status_def, idx|
+      DB[:status_types]
+        .insert_conflict(target: :name, do_nothing: true)
+        .insert(id: idx+1, name: status_def.type.to_s.upcase)
+    end
+
+    # 3) Attack types
+    Attacks.each_with_index do |atk_def, idx|
+      DB[:attack_types]
+        .insert_conflict(target: :name, do_nothing: true)
+        .insert(id: idx+1, name: atk_def.name.to_s.upcase)
+    end
+
+    # 4) Flare types
+    Flares.each_with_index do |flare_def, idx|
+      DB[:flare_types]
+        .insert_conflict(target: :name, do_nothing: true)
+        .insert(id: idx+1, name: flare_def.name.to_s.upcase)
+    end
+  end
+
+  def self.lookup_fk_id(table, name)
+    nm = name.to_s.upcase
+    row = DB[table].first(name: nm)
+    raise "Unknown #{table}: #{nm}" unless row
+    row[:id]
+  end
+
+  # Specific helpers
+  def self.lookup_location_id(location_name)
+    lookup_fk_id(:locations, location_name.gsub(" ",""))
+  end
+
+  def self.lookup_critical_type_id(crit_type_name)
+    lookup_fk_id(:critical_types, crit_type_name)
+  end
+
+  def self.lookup_flare_type_id(flare_name)
+    lookup_fk_id(:flare_types, flare_name)
+  end
+
+  def self.lookup_status_type_id(status_name)
+    lookup_fk_id(:status_types, status_name.to_s.upcase)
+  end
+
+  PROCESS_QUEUE = Queue.new
+  DOWNSTREAM_HOOK_ID = "CombatTracker::downstream"
+  @buffer = []
+  class << self
+    attr_reader :buffer
+  end
+
+  # Seperates incoming lines into chunks on the prompt.
+  # Alternative method to using a reget on events.
+  segment_buffer = proc do |server_string|
+    CombatTracker.buffer << server_string
+    Log.log(:VERBOSE, "SEG", "buffer << #{server_string.strip.inspect}")
+    if server_string =~ /<prompt time="\d+">/
+      # echo ("[CB] prompt is queuing #{CombatTracker.buffer.size} lines")
+      PROCESS_QUEUE << CombatTracker.buffer.dup
+      CombatTracker.buffer.clear
+    end
+    server_string
+  end
+  DownstreamHook.add(DOWNSTREAM_HOOK_ID, segment_buffer)
+
+  def self.process_chunk(chunk)
+    return if chunk.empty?
+    Log.log(:VERBOSE, "CHUNK", "got chunk with #{chunk.size} lines")
+
+    # 1) Parse the chunk into your in-memory events as before
+    events = []
+    current = nil
+    chunk.each do |line|
+      Log.log(:VERBOSE, "LINE", line)
+      if info = Parser.parse_attack(line)
+        tgt = info[:target] || {}
+        Log.log(:DEBUG, "PARSE","  -> attack `#{info[:name]}` on #{tgt[:name] || '<unknown>'} (##{tgt[:id]})")
+        events << current if current
+        current = {
+          name:         info[:name],
+          target:       info[:target],
+          resolution:   nil,
+          damage:       0,
+          crit:         { type: nil, location: nil, rank: nil, raw: nil },
+          statuses:     [],
+          flares:       [],
+          last_context: :attack
+        }
+
+      elsif current && (res = Parser.parse_resolution(line))
+        Log.log(:DEBUG, "PARSE","  -> resolution #{res[:type]} #{res[:data]}")
+        current[:resolution] = { type: res[:type], data: res[:data], raw: line.strip }
+
+      elsif current && (status = Parser.parse_status(line))
+        Log.log(:DEBUG, "PARSE","  -> status #{status}")
+        current[:statuses] << status
+
+      elsif current && (flare = Parser.parse_flare(line))
+        Log.log(:DEBUG, "PARSE","  -> flare `#{flare[:name]}`, dmg?=#{flare[:damaging]}")
+        current[:flares] << flare.merge(damage: 0, crit: nil)
+        current[:last_context] = :flare
+
+      elsif current && line =~ /\.\.\. and hit for (?<damage>\d+) points? of damage!/
+        dmg = Regexp.last_match[:damage].to_i
+        current[:damage] += dmg
+        current[:last_context] = :attack
+
+      elsif current && line =~ /\.\.\. (?<damage>\d+) points of damage!/
+        val = Regexp.last_match[:damage].to_i
+        if current[:last_context] == :flare
+          current[:flares].last[:damage] += val
+        else
+          current[:damage] += val
+        end
+
+      elsif current && (crit = CritRanks.parse(line).values.first)
+        if current[:last_context] == :attack
+          current[:crit] = { type: crit[:type], location: crit[:location], rank: crit[:rank], raw: line.strip }
+        else
+          current[:flares].last[:crit] = { type: crit[:type], location: crit[:location], rank: crit[:rank], raw: line.strip }
+        end
+      end
+    end
+    events << current if current
+
+    # 2) Everything below now happens in one transaction!
+    DB.transaction do
+      session_id = CombatSession.current_id
+
+      events.each_with_index do |atk, idx|
+        seq = CombatSession.next_sequence
+        t   = atk[:target] || {}
+
+        # a) upsert creature instance
+        if t[:id]
+          now = Time.now
+
+          DB[:creature_instances]
+            .insert_conflict(
+              target: [:session_id, :exist_id],
+              update: { last_seen_at: now }
+            )
+            .insert(
+              session_id:    session_id,
+              exist_id:      t[:id],
+              noun:          t[:noun],
+              display_name:  t[:name],
+              instance_hash: creature_hash(t[:id], t[:noun], now),
+              first_seen_at: now,
+              last_seen_at:  now
+            )
+
+          # now retrieve the PK so we can attach attacks directly
+          ci_id = DB[:creature_instances]
+            .where(session_id: session_id, exist_id: t[:id])
+            .get(:id)
+        else
+          ci_id = nil
+        end
+
+        # b) immediately insert attack and grab its real PK
+        attack_id = DB[:attack_events]
+          .returning(:id)
+          .insert(
+            session_id:           session_id,
+            creature_instance_id: ci_id,
+            sequence:             seq,
+            target_exist_id:      t[:id],
+            target_noun:          t[:noun],
+            target_name:          t[:name],
+            attack_name:          atk[:name].to_s,
+            attack_damage:        atk[:damage],
+            attack_crit_type:     atk[:crit][:type],
+            attack_crit_location: atk[:crit][:location],
+            attack_crit_rank:     atk[:crit][:rank],
+            statuses:             atk[:statuses].join(','),
+            occurred_at:          Time.now,
+            raw_line:             atk[:raw]
+          ).first[:id]
+
+        # c) status_events (if any)
+        atk[:statuses].each do |status|
+          DB[:status_events].insert(
+            creature_id:       nil,                   # backfilled later in your DBFlusher
+            applied_by_attack: attack_id,
+            status_type:       lookup_fk_id(:status_types, status.to_s.upcase),
+            started_at:        Time.now,
+            ended_at:          nil,
+            stack_count:       1
+          )
+        end
+
+        # d) resolution + components
+        if (res = atk[:resolution])
+          type_id = { as_ds: 1, cs_td: 2, smr: 3 }[res[:type]]
+          res_id = DB[:attack_resolutions]
+            .returning(:id)
+            .insert(
+              session_id:      session_id,
+              sequence:        seq,
+              attack_id:       attack_id,
+              resolution_type: type_id,
+              result_total:    res[:data][:total].to_i,
+              d100_roll:       res[:data][:roll].to_i,
+              raw_line:        res[:raw]
+            ).first[:id]
+
+          res[:data].each do |comp, val|
+            next if [:total, :roll].include?(comp)
+            DB[:resolution_components].insert(
+              session_id:      session_id,
+              sequence:        seq,
+              resolution_id:   res_id,
+              component_name:  comp.to_s.upcase,
+              component_value: val.to_i
+            )
+          end
+        end
+
+        # e) damage_components (if you parsed them earlier)
+        Array(atk[:damage_components]).each do |d|
+          DB[:damage_components].insert(
+            session_id:    session_id,
+            attack_id:     attack_id,
+            location_id:   lookup_location_id(d[:location]),
+            critical_type: lookup_critical_type_id(d[:type]),
+            critical_rank: d[:rank],
+            damage:        d[:amount]
+          )
+        end
+
+        # f) flares
+        atk[:flares].each_with_index do |flare, f_idx|
+          row = {
+            session_id:      session_id,
+            attack_sequence: seq,
+            flare_sequence:  f_idx + 1,
+            flare_name:      flare[:name].to_s,
+            flare_type:      lookup_flare_type_id(flare[:name]),
+            attack_id:       attack_id,
+            target_exist_id: t[:id],
+            target_noun:     t[:noun],
+            target_name:     t[:name],
+            raw_line:        flare[:raw]
+          }
+          if flare[:damaging]
+            row[:damage] = flare[:damage]
+            if loc = flare.dig(:crit, :location)
+              row[:location_id] = lookup_location_id(loc)
+            end
+            if ct = flare.dig(:crit, :type)
+              row[:critical_type] = lookup_critical_type_id(ct)
+              row[:critical_rank] = flare[:crit][:rank]
+            end
+          end
+          DB[:flare_events].insert(row)
+        end
+      end
+    end  # ← single commit/fsync for the entire chunk
+  end
+
+
+  before_dying {
+    CombatTracker::DBFlusher.flush!
+    DownstreamHook.remove(DOWNSTREAM_HOOK_ID)
+    CombatTracker::DB.disconnect
+  }
+
+  loop do
+    chunk = PROCESS_QUEUE.pop
+    CombatTracker.process_chunk(chunk)
+  end
+end
+
+
+
+=begin
+
+sess   = CombatTracker.last_session;events = CombatTracker.events_for_last_session;echo "[CB] Last session: #{sess[:id]} at #{sess[:started_at]}";events.each { |e| echo e.inspect }
+
+
+names = CombatTracker::DB[:flare_types].select_map(:name); echo "[CB] flare_types names: #{names.inspect}"
+
+
+;eq CombatTracker::CombatStore::MUTEX.synchronize do; CombatTracker::CombatStore::CACHE.clear; end
+
+
+;eq reporter = CombatTracker::CombatReporter.new;full = reporter.generate_combat_report(1);pp full
+
+;eq pp CombatTracker::DB[:creature_instances].where(session_id: 2).all.inspect
+
+;eq pp CombatTracker::DB[:damage_components].where(Sequel[:attack_events][:session_id] => 2).join(:attack_events, id: :attack_id).all.inspect
+
+;eq pp CombatTracker::DB[:status_events].where(Sequel[:creature_instances][:session_id] => 2).join(:creature_instances, id: :creature_id).all.inspect
+
+
+;eq r = CombatTracker::CombatReporter.new;nested = r.nested_session_report(2);pp nested
+
+
+;eq reporter = CombatTracker::CombatReporter.new;reporter.print_session_report(1)
+;eq reporter = CombatTracker::CombatReporter.new;reporter.print_creature_report(81684546)
+=end
+#80461626

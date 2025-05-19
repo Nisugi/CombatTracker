@@ -14,8 +14,8 @@ module CombatTracker
     # ---- definitions ---------------------------------------------------
     AttackDef     = Struct.new(:name, :patterns)
     FlareDef      = Struct.new(:name, :patterns, :damaging)
+    OutcomeDef    = Struct.new(:type, :patterns)
     ResolutionDef = Struct.new(:type, :patterns)
-    ResultDef     = Struct.new(:type, :patterns)
     StatusDef     = Struct.new(:type, :patterns)
 
     ATTACK_DEFS = [
@@ -144,25 +144,13 @@ module CombatTracker
       FlareDef.new(:water_flourish, [/\*\* A watery deluge erupts violently around .+?, crushing (?<target>.+?) with relentless force! **/].freeze, true),
     ].freeze
 
-    RESOLUTION_DEFS = [
-      ResolutionDef.new(:as_ds, [/AS: (?<AS>[\+\-\d]+) vs DS: (?<DS>[\+\-\d]+) with AvD: (?<AvD>[\+\-\d]+) \+ d\d+ roll: (?<roll>[\+\-\d]+) \= (?<result>[\+\-\d]+)/]).freeze,
-      ResolutionDef.new(:cs_td, [
-                          /CS: (?<CS>[\+\-\d]+) \- TD: (?<TD>[\+\-\d]+) \+ CvA: (?<CvA>[\+\-\d]+) \+ d\d+\: (?<roll>[\+\-\d]+) \=\= (?<result>[\+\-\d]+)/,
-                          /CS: (?<CS>[\+\-\d]+) \- TD: (?<TD>[\+\-\d]+) \+ CvA: (?<CvA>[\+\-\d]+) \+ d\d+\: (?<roll>[\+\-\d]+) \+ Bonus: (?<bonus>[\+\-\d]+) \=\= (?<result>[\+\-\d]+)/
-                        ]).freeze,
-      ResolutionDef.new(:smr, [
-                          /\[SMR Result: (?<result>\d+) \(Open d100: (?<roll>[\+\-\d]+), Bonus: (?<bonus>[\-\+\d]+)\)\]/,
-                          /\[SMR Result: (?<result>\d+) \(Open d100: (?<roll>[\+\-\d]+)\)\]/
-                        ]).freeze
-    ].freeze
-
-    RESULT_DEFS = [
-      ResultDef.new(:miss, [
+    OUTCOME_DEFS = [
+      OutcomeDef.new(:miss, [
         /A clean miss./,
         /A close miss./,
         /Nowhere close!/
       ].freeze),
-      ResultDef.new(:evade, [
+      OutcomeDef.new(:evade, [
         /By amazing chance, (?<target>.+?) evades the .+?!/,
         /Lying flat on .+? back, (?<target>.+?) leans to one side and dodges the .+?!/,
         /Nearly insensible, (?<target>.+?) desperately evades the .+?!/,
@@ -180,7 +168,7 @@ module CombatTracker
         /(?<target>.+?) skillfully dodges the .+?!/,
         /(?<target>.+?) stumbles dazedly, somehow managing to evade the .+?!/
       ].freeze),
-      ResultDef.new(:block, [
+      OutcomeDef.new(:block, [
         /A heavy barrier of stone momentarily forms around (?<target>.+?) and blocks the attack!/,
         /Amazingly, (?<target>.+?) manages to block the .+? with .+?!/,
         /At the last moment, (?<target>.+?) blocks the .+? with .+?!/,
@@ -205,17 +193,29 @@ module CombatTracker
         /(?<target>.+?) stumbles dazedly, but manages to block the .+? with .+?!/,
         /(?<target>.+?) tumbles to the side and deflects the .+? with .+?!/
       ].freeze),
-      ResultDef.new(:parry, [
+      OutcomeDef.new(:parry, [
         /Amazingly, (?<target>.+?) manages to parry the .+? with .+?!/,
         /At the last moment, (?<target>.+?) parries the .+? with .+?!/,
         /Using the bone plates surrounding .+? forearms, (?<target>.+?) parries your .+?!/,
         /With no room to spare, (?<target>.+?) manages to parry the .+? with .+?!/,
         /(?<target>.+?) flails on the ground but manages to parry the .+? with .+?!/,
       ].freeze),
-      ResultDef.new(:fumble, [/d100 == 1 FUMBLE!/].freeze),
-      ResultDef.new(:hindrance, [/\[Spell Hindrance for (?<armor>.+?) is (?<hindrance_amount>\d+)% with current Armor Use skill, d100= (?<roll>\d+)\]/].freeze),
-      ResultDef.new(:confused, [/Something confusing enters your mind at the worst possible moment, and the distraction disrupts your .+?!/].freeze)
+      OutcomeDef.new(:fumble, [/d100 == 1 FUMBLE!/].freeze),
+      OutcomeDef.new(:hindrance, [/\[Spell Hindrance for (?<armor>.+?) is (?<hindrance_amount>\d+)% with current Armor Use skill, d100= (?<roll>\d+)\]/].freeze),
+      OutcomeDef.new(:confused, [/Something confusing enters your mind at the worst possible moment, and the distraction disrupts your .+?!/].freeze)
     ]
+
+    RESOLUTION_DEFS = [
+      ResolutionDef.new(:as_ds, [/AS: (?<AS>[\+\-\d]+) vs DS: (?<DS>[\+\-\d]+) with AvD: (?<AvD>[\+\-\d]+) \+ d\d+ roll: (?<roll>[\+\-\d]+) \= (?<result>[\+\-\d]+)/]).freeze,
+      ResolutionDef.new(:cs_td, [
+                          /CS: (?<CS>[\+\-\d]+) \- TD: (?<TD>[\+\-\d]+) \+ CvA: (?<CvA>[\+\-\d]+) \+ d\d+\: (?<roll>[\+\-\d]+) \=\= (?<result>[\+\-\d]+)/,
+                          /CS: (?<CS>[\+\-\d]+) \- TD: (?<TD>[\+\-\d]+) \+ CvA: (?<CvA>[\+\-\d]+) \+ d\d+\: (?<roll>[\+\-\d]+) \+ Bonus: (?<bonus>[\+\-\d]+) \=\= (?<result>[\+\-\d]+)/
+                        ]).freeze,
+      ResolutionDef.new(:smr, [
+                          /\[SMR Result: (?<result>\d+) \(Open d100: (?<roll>[\+\-\d]+), Bonus: (?<bonus>[\-\+\d]+)\)\]/,
+                          /\[SMR Result: (?<result>\d+) \(Open d100: (?<roll>[\+\-\d]+)\)\]/
+                        ]).freeze
+    ].freeze
 
     STATUS_DEFS = [
       StatusDef.new(:stunned, [/The (?<target>.+?) is stunned!/].freeze),
@@ -227,13 +227,13 @@ module CombatTracker
     ATTACK_LOOKUP     = ATTACK_DEFS.flat_map     { |d| d.patterns.map { |rx| [rx, d.name] } }.freeze
     FLARE_LOOKUP      = FLARE_DEFS.flat_map      { |d| d.patterns.map { |rx| [rx, d.name, d.damaging] } }.freeze
     RESOLUTION_LOOKUP = RESOLUTION_DEFS.flat_map { |d| d.patterns.map { |rx| [rx, d.type] } }.freeze
-    RESULT_LOOKUP     = RESULT_DEFS.flat_map     { |d| d.patterns.map { |rx| [rx, d.type] } }.freeze
+    OUTCOME_LOOKUP    = OUTCOME_DEFS.flat_map    { |d| d.patterns.map { |rx| [rx, d.type] } }.freeze
     STATUS_LOOKUP     = STATUS_DEFS.flat_map     { |d| d.patterns.map { |rx| [rx, d.type] } }.freeze
 
     ATTACK_DETECTOR     = Regexp.union(ATTACK_LOOKUP.map(&:first)).freeze
     FLARE_DETECTOR      = Regexp.union(FLARE_LOOKUP.map(&:first)).freeze
+    OUTCOME_DETECTOR    = Regexp.union(OUTCOME_LOOKUP.map(&:first)).freeze
     RESOLUTION_DETECTOR = Regexp.union(RESOLUTION_LOOKUP.map(&:first)).freeze
-    RESULT_DETECTOR     = Regexp.union(RESULT_LOOKUP.map(&:first)).freeze
     STATUS_DETECTOR     = Regexp.union(STATUS_LOOKUP.map(&:first)).freeze
 
     module_function
@@ -272,9 +272,9 @@ module CombatTracker
       end
     end
 
-    def parse_result(line)
-      return unless RESULT_DETECTOR.match?(line)
-      RESULT_DETECTOR.each { |rx, type| return type if rx.match?(line)}
+    def parse_outcome(line)
+      return unless OUTCOME_DETECTOR.match?(line)
+      OUTCOME_LOOKUP.each { |rx, type| return type if rx.match?(line)}
     end
 
     def parse_status(line)
