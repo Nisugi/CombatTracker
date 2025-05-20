@@ -368,12 +368,12 @@ module CombatTracker
           current = init_event(a)
 
         elsif current && ln =~ /\.\.\. and hit for (?<d>\d+) points? of damage!/i
-          current[:damage] += Regexp.last_match[:d].to_i
+          current[:damages] << Regexp.last_match[:d].to_i
           current[:ctx]     = :attack
 
         elsif current && ln =~ /\.\.\. (?<d>\d+) points of damage!/i
           dmg = Regexp.last_match[:d].to_i
-          (current[:ctx] == :flare ? current[:flares].last : current)[:damage] += dmg
+          (current[:ctx] == :flare ? current[:flares].last : current)[:damages] << dmg
 
         elsif current && (r = Parser.parse_resolution(ln))
           current[:resolution] = r
@@ -392,12 +392,12 @@ module CombatTracker
           current[:statuses] << s
 
         elsif current && (f = Parser.parse_flare(ln))
-          current[:flares]    << f.merge(damage: 0, crit: nil)
+          current[:flares]    << f.merge(damages: [], crits: [])
           current[:ctx] = :flare
 
         elsif current && (c = CritRanks.parse(ln.gsub(/<.+?>/,'')).values.first)
           target = current[:ctx] == :flare ? current[:flares].last : current
-          target[:crit] = { type: c[:type], location: c[:location], rank: c[:rank], raw: ln.strip }
+          target[:crits] << { type: c[:type], location: c[:location], rank: c[:rank], fatal: c[:fatal] }
 
         end
       end
@@ -414,10 +414,13 @@ module CombatTracker
     def init_event(attack_info)
       {
         name: attack_info[:name],
+        damaging: attack_info[:damaging],
+        spell: attack_info[:spell],
+        aoe: attack_info[:aoe],
         target: attack_info[:target] || {},
         resolution: nil,
-        damage: 0,
-        crit: { type: nil, location: nil, rank: nil, raw: nil },
+        damages: [],
+        crits: [],
         statuses: [],
         flares: [],
         ctx: :attack
@@ -450,24 +453,29 @@ module CombatTracker
         sequence:             seq,
         creature_instance_id: ci_id,
         attack_type_id:       Lookup.id(:attack_types, ev[:name]),
-        is_fatal:             ev.dig(:crit, :fatal),
         outcome_id:           outcome_id,
         occurred_at:          now,
       })
 
+      ev[:damages].each_with_index do |damage, i|      
       damage_component = {
         attack_id: attack_id,
-        damage:    ev[:damage],
+          damage:    damage,
       }
 
-      if ev[:crit] && ev[:crit][:type] && outcome_id == 1
-        damage_component[:location_id] = Lookup.id(:locations, ev.dig(:crit, :location))
-        damage_component[:critical_type] = Lookup.id(:critical_types, ev.dig(:crit, :type))
-        damage_component[:critical_rank] = ev.dig(:crit, :rank)
-      else
-        Log.log(:WARN, "CRIT", "No crit message detected for attack #{attack_id}.") if outcome_id == 1
+        if outcome_id == 1 && (crit = ev[:crits][i])
+          damage_component[:location_id]    = Lookup.id(:locations, crit[:location])
+          damage_component[:critical_type]  = Lookup.id(:critical_types, crit[:type])
+          damage_component[:critical_rank]  = crit[:rank]
+          damage_component[:is_fatal]       = crit[:fatal]
+        else
+          if outcome_id == 1 && (ev[:name] != :natures_fury)
+            Log.log(:WARN, "CRIT", "No crit message detected for attack #{ev[:name]} (#{attack_id}).")
+          end
+        end
+        CombatTracker::DebugInsert.insert(:damage_components, damage_component)
       end
-      CombatTracker::DebugInsert.insert(:damage_components, damage_component)
+      
 
       persist_statuses(ev[:statuses], attack_id, session_id)
       persist_resolution(ev[:resolution], attack_id, seq, session_id) if ev[:resolution]
@@ -536,9 +544,8 @@ module CombatTracker
         attack_id:       atk_id,
         sequence:        seq,
         resolution_type: type_id,
-        result_total:    res[:data][:total].to_i,
+        result_total:    res[:data][:result].to_i,
         d100_roll:       res[:data][:roll].to_i,
-        raw_line:        res[:raw]
       }
 
       # insert and grab its PK
@@ -575,22 +582,25 @@ module CombatTracker
             attack_sequence: seq,
             flare_sequence:  i + 1,
             flare_type_id:   Lookup.id(:flare_types, fl[:name]),
-            is_fatal:        fl.dig(:crit, :fatal)
           })
         
         if fl[:damaging]
+          fl[:damages].each_with_index do |damage, i|
           damage_component = {
             flare_id:        flare_event_id,
-            damage:          fl[:damage],
+              damage:          damage,
           }
-          if fl[:crit] && fl[:crit][:type]
-            damage_component[:location_id] = Lookup.id(:locations, fl.dig(:crit, :location))
-            damage_component[:critical_type] = Lookup.id(:critical_types, fl.dig(:crit, :type))
-            damage_component[:critical_rank] = fl.dig(:crit, :rank)
-          else
-            Log.log(:WARN, "CRIT", "No crit message detected for flare #{flare_event_id}.")
+          
+            if crit = fl[:crits][i]
+              damage_component[:location_id] = Lookup.id(:locations, crit[:location])
+              damage_component[:critical_type] = Lookup.id(:critical_types, crit[:type])
+              damage_component[:critical_rank] = crit[:rank]
+              damage_component[:is_fatal] = crit[:fatal]
+            else
+              Log.log(:WARN, "CRIT", "No crit message detected for flare #{flare_event_id}.")
+            end
+            CombatTracker::DebugInsert.insert(:damage_components, damage_component)
           end
-          CombatTracker::DebugInsert.insert(:damage_components, damage_component)
         end
       end
     end

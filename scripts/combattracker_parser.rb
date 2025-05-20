@@ -32,52 +32,52 @@ module CombatTracker
 
     # ---- definitions ---------------------------------------------------
     # Struct definitions for various combat-related entities.
-    AttackDef     = Struct.new(:name, :patterns)
-    FlareDef      = Struct.new(:name, :patterns, :damaging)
+    AttackDef     = Struct.new(:name, :patterns, :damaging, :spell, :aoe)
+    FlareDef      = Struct.new(:name, :patterns, :damaging, :aoe)
     LodgedDef     = Struct.new(:type, :patterns)
     OutcomeDef    = Struct.new(:type, :patterns)
     ResolutionDef = Struct.new(:type, :patterns)
     StatusDef     = Struct.new(:type, :patterns)
 
     ATTACK_DEFS = [
-      AttackDef.new(:attack, [/You(?: take aim and)? swing .+? at (?<target>[^!]+)!/].freeze),
-      AttackDef.new(:barrage, [/Nocking another arrow to your bowstring, you swiftly draw back and loose again!/].freeze),
+      AttackDef.new(:attack, [/You(?<aimed> take aim and)? swing .+? at (?<target>[^!]+)!/].freeze, true, false, false),
+      AttackDef.new(:barrage, [/Nocking another arrow to your bowstring, you swiftly draw back and loose again!/].freeze, true, false, false),
       AttackDef.new(:companion, [
         /(?<companion>.+?) pounces on (?<target>[^,]+), knocking the .+? painfully to the ground!/,
         /The (?<companion>.+?) takes the opportunity to slash .+? claws at the (?<target>.+?) \w+!/,
         /(?<companion>.+?) charges forward and slashes .+? claws at (?<target>.+?) faster than .+? can react!/
-      ].freeze),
-      AttackDef.new(:cripple, [/You reverse your grip on your .+? and dart toward (?<target>.+?) at an angle!/].freeze),
-      AttackDef.new(:fire, [/You(?: take aim and)? fire .+? at (?<target>[^!]+)!/].freeze),
+      ].freeze, true, false, false),
+      AttackDef.new(:cripple, [/You reverse your grip on your .+? and dart toward (?<target>.+?) at an angle!/].freeze, true, false, false),
+      AttackDef.new(:fire, [/You(?<aimed> take aim and)? fire .+? at (?<target>[^!]+)!/].freeze, true, false, false),
       AttackDef.new(:flurry, [
         /Flowing with deadly grace, you smoothly reverse the direction of your blades and slash again!/,
         /With fluid motion, you guide your flashing blades, slicing toward (?<target>.+?) at the apex of their deadly arc!/
-      ].freeze),
-      AttackDef.new(:grapple, [/You(?: make a precise)? attempt to grapple (?<target>[^!]+)!/].freeze),
-      AttackDef.new(:jab, [/You(?: make a precise)? attempt to jab (?<target>[^!]+)!/].freeze),
-      AttackDef.new(:punch, [/You(?: make a precise)? attempt to punch (?<target>[^!]+)!/].freeze),
-      AttackDef.new(:kick, [/You(?: make a precise)? attempt to kick (?<target>[^!]+)!/].freeze),
-      AttackDef.new(:natures_fury, [/The surroundings advance upon (?<target>.+?) with relentless fury!/].freeze),
-      AttackDef.new(:spikethorn, [/Dozens of long thorns suddenly grow out from the ground underneath (?<target>[^!]+)!/].freeze),
-      AttackDef.new(:sunburst, [/The dazzling solar blaze flashes before (?<target>[^!]+)!/].freeze),
+      ].freeze, true, false, false),
+      AttackDef.new(:grapple, [/You(?: make a precise)? attempt to grapple (?<target>[^!]+)!/].freeze, true, false, false),
+      AttackDef.new(:jab, [/You(?: make a precise)? attempt to jab (?<target>[^!]+)!/].freeze, true, false, false),
+      AttackDef.new(:punch, [/You(?: make a precise)? attempt to punch (?<target>[^!]+)!/].freeze, true, false, false),
+      AttackDef.new(:kick, [/You(?: make a precise)? attempt to kick (?<target>[^!]+)!/].freeze, true, false, false),
+      AttackDef.new(:natures_fury, [/The surroundings advance upon (?<target>.+?) with relentless fury!/].freeze, true, true, true),
+      AttackDef.new(:spikethorn, [/Dozens of long thorns suddenly grow out from the ground underneath (?<target>[^!]+)!/].freeze, true, true, false),
+      AttackDef.new(:sunburst, [/The dazzling solar blaze flashes before (?<target>[^!]+)!/].freeze, true, true, true),
       AttackDef.new(:tangleweed, [
         /The (?<weed>.+?) lashes out violently at (?<target>[^,]+), dragging .+? to the ground!/,
         /The (?<weed>.+?) lashes out at (?<target>[^,]+), wraps itself around .+? body and entangles .+? on the ground\./
-      ].freeze),
-      AttackDef.new(:twinhammer, [/You raise your hands high, lace them together and bring them crashing down towards (?<target>[^!]+)!/].freeze),
+      ].freeze, true, true, false),
+      AttackDef.new(:twinhammer, [/You raise your hands high, lace them together and bring them crashing down towards (?<target>[^!]+)!/].freeze, true, false, false),
       AttackDef.new(:volley, [
         /An arrow finds its mark!  (?<target>.+?) is hit!/,
         /An arrow pierces (?<target>[^!]+)!/,
         /An arrow skewers (?<target>[^!]+)!/,
         /(?<target>.+?) is struck by a falling arrow!/,
         /(?<target>.+?) is transfixed by an arrow's descent!/
-      ].freeze),
+      ].freeze, true, false, true),
       AttackDef.new(:wblade, [
         /You turn, blade spinning in your hand toward (?<target>[^!]+)!/,
         /You angle your blade at (?<target>.+?) in a crosswise slash!/,
         /In a fluid whirl, you sweep your blade at (?<target>[^!]+)!/,
         /Your blade licks out at (?<target>.+?) in a blurred arc!/
-      ].freeze),
+      ].freeze, true, false, true),
     ].freeze
 
     FLARE_DEFS = [
@@ -89,7 +89,7 @@ module CombatTracker
       FlareDef.new(:air, [/\*\* Your .+? unleashes a blast of air! \*\*/].freeze, true),
       FlareDef.new(:air_flourish, [/\*\* A fierce whirlwind erupts around .+?, encircling (?<target>.+?) in a suffocating cyclone! \*\*/].freeze, true),
       FlareDef.new(:arcane_reflex, [/Vital energy infuses you, hastening your arcane reflexes!/].freeze, false),
-      FlareDef.new(:blink, [/Your .+? suddenly lights up with hundreds of tiny blue sparks!/].freeze, false),
+      FlareDef.new(:blink, [/Your .+? suddenly lights up with hundreds of tiny blue sparks!/].freeze, true),
       FlareDef.new(:blessings_flourish, [
         /\*\* A crackling wave arcs across your body, striking (?<target>.+?) with lightning speed!  A spiritual resonance warms your core, lending you renewed strength! \*\*/,
         /\*\* Shimmering arcs of lightning stream from your hands, colliding with (?<target>.+?) in a rapid burst!  A stirring force ignites within you, augmenting your spirit! \*\*/,
@@ -143,6 +143,7 @@ module CombatTracker
       FlareDef.new(:psychic_assault, [/\*\* Your .+? unleashes a blast of psychic energy at the (?<target>[^!]+)! \*\*/].freeze, true),
       FlareDef.new(:religion_flourish, [/\*\* Divine flames kindle around .+?, leaping forth to engulf (?<target>.+?) in a sacred inferno! \*\*/].freeze, true),
       FlareDef.new(:rusalkan, [/Succumbing to the force of the tidal wave, (?<target>.+?) is thrown to the ground\./].freeze, false),
+      FlareDef.new(:slashing_strikes, [/\*\* Your .+? finds its mark, slicing deep into (?<target>.+?)<\/popBold> (?<location>.+?)! \*\*/].freeze),
       FlareDef.new(:somnis, [/\*\* For a split second, the striations of your .+? expand into a sinuous pearlescent mist that rushes towards the (?<target>[^,]+), enveloping .+? entirely and causing .+? to collapse, fast asleep! \*\*/].freeze, false),
       FlareDef.new(:sprite, [/\*\* The .+? sprite on your shoulder sends forth a cylindrical, .+? blast of magic at (?<target>.+?\<\/a\>) .+?! \*\*/].freeze, true),
       FlareDef.new(:steam, [
@@ -247,18 +248,20 @@ module CombatTracker
     ].freeze
 
     STATUS_DEFS = [
-      StatusDef.new(:stunned, [/The (?<target>.+?) is stunned!/].freeze),
+      StatusDef.new(:blind, [/You blinded (?<target>[^!]+)!/].freeze),
+      StatusDef.new(:immobilized, [/(?<target>.+?) form is entangled in an unseen force that restricts .+? movement\./].freeze),
       StatusDef.new(:prone, [
         /It is knocked to the ground!/,
         /(?<target>.+?) is knocked to the ground!/
       ].freeze),
-      StatusDef.new(:immobilized, [/(?<target>.+?) form is entangled in an unseen force that restricts .+? movement\./].freeze),
-      StatusDef.new(:blind, [/You blinded (?<target>[^!]+)!/].freeze)
+      StatusDef.new(:stunned, [/The (?<target>.+?) is stunned!/].freeze),
+      StatusDef.new(:sunburst, [/(?<target>.+?) reels and stumbles under the intense flare!/].freeze),
+      StatusDef.new(:webbed, [/(?<target>.+?) becomes ensnared in thick strands of webbing!/].freeze)
     ].freeze
 
     # Lookup tables for different combat patterns.
-    ATTACK_LOOKUP     = ATTACK_DEFS.flat_map     { |d| d.patterns.map { |rx| [rx, d.name] } }.freeze
-    FLARE_LOOKUP      = FLARE_DEFS.flat_map      { |d| d.patterns.map { |rx| [rx, d.name, d.damaging] } }.freeze
+    ATTACK_LOOKUP     = ATTACK_DEFS.flat_map     { |d| d.patterns.map { |rx| [rx, d.name, d.damaging, d.spell, d.aoe]} }.freeze
+    FLARE_LOOKUP      = FLARE_DEFS.flat_map      { |d| d.patterns.map { |rx| [rx, d.name, d.damaging, d.aoe] } }.freeze
     RESOLUTION_LOOKUP = RESOLUTION_DEFS.flat_map { |d| d.patterns.map { |rx| [rx, d.type] } }.freeze
     OUTCOME_LOOKUP    = OUTCOME_DEFS.flat_map    { |d| d.patterns.map { |rx| [rx, d.type] } }.freeze
     STATUS_LOOKUP     = STATUS_DEFS.flat_map     { |d| d.patterns.map { |rx| [rx, d.type] } }.freeze
@@ -292,9 +295,9 @@ module CombatTracker
     #   # => { name: "goblin", target: { id: 123456, noun: "goblin", name: "ugly goblin" }, raw: "The goblin attacks with a sword!" }
     def parse_attack(line)
       return unless ATTACK_DETECTOR.match?(line)
-      ATTACK_LOOKUP.each do |rx, name|
+      ATTACK_LOOKUP.each do |rx, name, damaging, spell, aoe|
         if (m = rx.match(line))
-          info = { name: name, raw: line.strip }
+          info = { name: name, damaging: damaging, spell: spell, aoe: aoe,  raw: line.strip }
           if m.names.include?('target')
             raw_t = m[:target]
             info[:target] = extract_link(raw_t) || { id: nil, noun: nil, name: raw_t }
