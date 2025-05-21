@@ -17,6 +17,11 @@ CREATE TABLE creature_types (
     notes  TEXT
 );
 
+CREATE TABLE assault_types(
+    id   INTEGER PRIMARY KEY,
+    name TEXT     UNIQUE NOT NULL
+);
+
 CREATE TABLE attack_types (
     id   INTEGER PRIMARY KEY,
     name TEXT     UNIQUE NOT NULL
@@ -124,7 +129,7 @@ CREATE TABLE combat_sessions (
     id             INTEGER PRIMARY KEY AUTOINCREMENT,
     character_name TEXT NOT NULL,
     started_at     DATETIME NOT NULL,
-    last_event_at  DATETIME NOT NULL,   -- 180‑second timeout tracking
+    last_event_at  DATETIME NOT NULL,
     ended_at       DATETIME
 );
 
@@ -151,6 +156,8 @@ CREATE TABLE attack_events (
   attack_type_id        INTEGER REFERENCES attack_types(id),
   occurred_at           DATETIME NOT NULL,
   outcome_id            INTEGER REFERENCES outcome_types(id),
+  assault_id            INTEGER REFERENCES assault_events(id) DEFERRABLE INITIALLY DEFERRED DEFAULT NULL,
+  assault_sequence      INTEGER DEFAULT NULL,
   FOREIGN KEY (creature_instance_id) REFERENCES creature_instances(id) DEFERRABLE INITIALLY DEFERRED
 );
 -- timeline index: all activity in a hunt
@@ -174,13 +181,10 @@ CREATE INDEX idx_resolutions_session_seq ON attack_resolutions(session_id, seque
 -- 2‑e  Resolution components (flexible key/value)
 CREATE TABLE resolution_components (
     resolution_id    INTEGER REFERENCES attack_resolutions(id) ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED,
-    session_id       INTEGER NOT NULL REFERENCES combat_sessions(id),
-    sequence         INTEGER NOT NULL,
     component_name   TEXT    NOT NULL,
     component_value  INTEGER NOT NULL,
     PRIMARY KEY (resolution_id, component_name)
 );
-CREATE INDEX idx_components_session_seq ON resolution_components(session_id, sequence);
 
 -- 2‑f  Defense events (optional row per defensive outcome)
 CREATE TABLE defense_events (
@@ -233,7 +237,8 @@ CREATE TABLE flare_events (
     flare_sequence  INTEGER NOT NULL DEFAULT 0,
     flare_type_id   INTEGER REFERENCES flare_types(id),
     attack_id       INTEGER REFERENCES attack_events(id) ON DELETE CASCADE,
-    flare_type      INTEGER REFERENCES flare_types(id)
+    flare_type      INTEGER REFERENCES flare_types(id),
+    child_attack_id INTEGER NULL
 );
 CREATE INDEX idx_flares_session_seq ON flare_events(session_id, attack_sequence);
 CREATE INDEX idx_flare_events_attack_id ON flare_events(attack_id);
@@ -253,21 +258,32 @@ CREATE INDEX idx_lodged_events_attack ON lodged_events(attack_id);
 
 -- 2‑j  Status events (stuns, webs, arrow‑stuck, buffs …)
 CREATE TABLE status_events (
-  id               INTEGER PRIMARY KEY AUTOINCREMENT,
-  target_exist_id  INTEGER,
-  session_id      INTEGER NOT NULL DEFAULT 0,
-  creature_id      INTEGER REFERENCES creature_instances(id),
+  id                INTEGER PRIMARY KEY AUTOINCREMENT,
+  target_exist_id   INTEGER,
+  session_id        INTEGER NOT NULL DEFAULT 0,
+  creature_id       INTEGER REFERENCES creature_instances(id),
   applied_by_attack INTEGER REFERENCES attack_events(id),
-  status_type      INTEGER REFERENCES status_types(id),
-  location_id      INTEGER REFERENCES locations(id),
-  started_at       DATETIME NOT NULL,
-  ended_at         DATETIME,
-  is_active        BOOLEAN GENERATED ALWAYS AS (ended_at IS NULL) STORED,
-  notes            TEXT
+  status_type       INTEGER REFERENCES status_types(id),
+  location_id       INTEGER REFERENCES locations(id),
+  started_at        DATETIME NOT NULL,
+  ended_at          DATETIME,
+  is_active         BOOLEAN GENERATED ALWAYS AS (ended_at IS NULL) STORED,
+  notes             TEXT
 );
 CREATE INDEX idx_status_events_started ON status_events(started_at);
 CREATE INDEX idx_status_events_creature_status ON status_events(creature_id, status_type);
 CREATE INDEX idx_status_events_session_id ON status_events(session_id);
+
+-- 2-k  Assault events
+CREATE TABLE assault_events(
+  id                    INTEGER PRIMARY KEY AUTOINCREMENT,
+  session_id            INTEGER NOT NULL REFERENCES combat_sessions(id),
+  creature_instance_id  INTEGER NOT NULL REFERENCES creature_instances(id),
+  assault_type_id       INTEGER NOT NULL REFERENCES attack_types(id),
+  started_at            DATETIME NOT NULL,
+  ended_at              DATETIME,
+  FOREIGN KEY (creature_instance_id) REFERENCES creature_instances(id) DEFERRABLE INITIALLY DEFERRED
+);
 
 
 CREATE TABLE combat_summary (

@@ -1,0 +1,420 @@
+module CombatTracker
+  class Reporter
+    @type_sequences = {}
+
+    # creature_noun  - String (optional)
+    # creature_index - Integer (optional, 1-based or negative)
+    def self.creature_report(creature_noun = nil, creature_index = nil)
+      # 1) gather all nouns
+      nouns = DB.conn[:creature_instances]
+               .select_map(:noun)
+               .uniq
+
+      # If no noun given or invalid, list choices
+      if creature_noun.nil? ||
+         !nouns.map(&:upcase).include?(creature_noun.to_s.upcase)
+
+        msg = "> Available Creature Nouns:\n"
+        nouns.sort.each { |n| msg += "      #{n}\n" }
+        msg += "\nUsage: CombatTracker::Reporter.creature_report(\"gigas shield-maiden\", [index])\n\n"
+        respond Lich::Messaging.mono(msg)
+        return
+      end
+
+      # 2) normalize to DB casing
+      chosen_noun = nouns.find { |n| n.upcase == creature_noun.to_s.upcase }
+
+      # 3) build sequence of instance IDs for this noun
+      seq = DB.conn[:creature_instances]
+              .where(noun: chosen_noun)
+              .order(:id)
+              .select_map(:id)
+
+      if seq.empty?
+        puts "No recorded instances of “#{chosen_noun}”."
+        return
+      end
+
+      # 4) pick the right index
+      idx = if creature_index
+        i = creature_index.to_i
+        i > 0 ? (i - 1) : (seq.size + i)
+      else
+        seq.size - 1
+      end
+
+      unless idx.between?(0, seq.size - 1)
+        puts "Invalid index #{creature_index} for #{chosen_noun} (have #{seq.size} instances):"
+        list_instance_ordinals(chosen_noun, seq)
+        return
+      end
+
+      cid = seq[idx]
+      ci  = DB.conn[:creature_instances].where(id: cid).first
+
+      # 5) header
+      header = "Report for #{ci[:display_name]} ##{ci[:exist_id]}  -  #{chosen_noun.upcase} (#{idx+1})"
+
+      # 6) collect rows: only "root" attacks (exclude those that are children of flares)
+      #    so we don’t duplicate any child_attack under both flare and top-level
+      child_ids = DB.conn[:flare_events]
+                    .where(Sequel.~(child_attack_id: nil))
+                    .select_map(:child_attack_id)
+
+      all_rows = []
+      DB.conn[:attack_events]
+        .where(creature_instance_id: cid)
+        .exclude(id: child_ids)            # ← drop all child attacks here
+        .order(:sequence)
+        .select_map(:id)
+        .each do |aid|
+          all_rows.concat format_attack_tree(aid)
+        end
+
+      if all_rows.empty?
+        puts "No attacks recorded against #{chosen_noun} ##{idx+1}."
+        return
+      end
+
+      # 7) render as one big table
+      print_ascii_table(
+        header,
+        %w[Attack DMG STATUS CRIT_STUFFS FATAL?],
+        all_rows
+      )
+    end
+
+    private
+
+    # Helper to list all instance ordinals for a given noun
+    def self.list_instance_ordinals(noun, seq)
+      puts "\n> #{noun} Instances:"
+      seq.each_with_index do |id, i|
+        disp = DB.conn[:creature_instances]
+                 .where(id: id)
+                 .get(:display_name)
+        puts "   #{i+1} => ID #{id} “#{disp}”"
+      end
+      puts
+    end
+
+    # attack_name - String, e.g. "FIRE", or nil; if nil, displays a list of valid options
+    # attack_id   - Integer or nil; if nil, finds the last attack of that name
+    def self.attack_report(attack_name = nil, attack_index = nil)
+      # 1) list of valid types
+      valid_names = DB.conn[:attack_types].select_map(:name)
+
+      # If no name or invalid name, print choices
+      if attack_name.nil? ||
+         !valid_names.map(&:upcase).include?(attack_name.to_s.upcase)
+
+        puts "\n> Available Attacks:"
+        valid_names.sort.each { |n| puts "   • #{n}" }
+        puts "\nUsage: CombatTracker::Reporter.attack_report(\"FIRE\", [index])\n\n"
+        return
+      end
+
+      # normalize to DB casing
+      chosen = valid_names.find { |n| n.upcase == attack_name.to_s.upcase }
+
+      # build (or fetch) the in-memory sequence of global IDs
+      seq = sequence_for(chosen)
+      if seq.empty?
+        puts "No recorded #{chosen} attacks."
+        return
+      end
+
+      # pick which global attack_id to show
+      if attack_index
+        raw = attack_index.to_i
+        idx = raw > 0 ? raw - 1 : seq.size + raw
+        unless idx.between?(0, seq.size - 1)
+          puts "Invalid index #{idx} for #{chosen} (have #{seq.size} events)."
+          return
+        end
+      else
+        idx = seq.size - 1
+      end
+
+      ord = idx + 1
+      selected_id = seq[idx]
+
+      # fetch & render exactly that global ID (still restricted to this type)
+      attack = fetch_attack(chosen, selected_id)
+      target = DB.conn[:creature_instances]
+                 .where(id: attack[:creature_instance_id])
+                 .first
+
+      header =  "Report for #{chosen} (#{ord})   " \
+                "Target (#{target[:id]}) #{target[:display_name]}"
+      rows   = format_attack_tree(selected_id)
+
+      print_ascii_table(header,
+                        %w[Attack DMG STATUS CRIT_STUFFS FATAL?],
+                        rows)
+    end
+
+    private
+
+    # Builds/caches the sorted list of global IDs for a given type
+    def self.sequence_for(name)
+      @type_sequences[name] ||= DB.conn[:attack_events]
+                                 .join(:attack_types, id: :attack_type_id)
+                                 .where(Sequel[:attack_types][:name] => name)
+                                 .order(Sequel[:attack_events][:id])
+                                 .select_map(Sequel[:attack_events][:id])
+    end
+
+    # Helpful listing when someone gives an out-of-range index
+    def self.list_ordinals_for(name, seq)
+      puts "\n▶ #{name} Attacks Ordinals (index ⇒ global ID):"
+      seq.each_with_index do |id, i|
+        puts "   #{i+1} ⇒ #{id}"
+      end
+      puts
+    end
+
+    # Find the attack_event row
+    def self.fetch_attack(name, id)
+      ds = DB.conn[:attack_events]
+            .join(:attack_types, id: :attack_type_id)
+            .select_all(:attack_events)
+            .select_append(Sequel[:attack_types][:name].as(:atype))
+      if id
+        ds.where(Sequel[:attack_events][:id] => id).first
+      else
+        ds.where(Sequel[:attack_types][:name] => name)
+          .order(Sequel.desc(Sequel[:attack_events][:id]))
+          .first
+      end
+    end
+
+    # Build a list of rows for one attack (and its flares), splitting each damage component.
+    # Each row is [indent_level, attack_or_flare_name, dmg, status, crit_str, fatal_flag]
+    # Build rows for one attack, merging first damage into the header
+    def self.format_attack_tree(attack_id, indent = 0)
+      rows = []
+
+      # 1) Fetch attack + status
+      atk = DB.conn[:attack_events]
+             .join(:attack_types, id: :attack_type_id)
+             .where(Sequel[:attack_events][:id] => attack_id)
+             .select_all(:attack_events)
+             .select_append(Sequel[:attack_types][:name].as(:atype))
+             .first
+      status = DB.conn[:status_events]
+                  .join(:status_types, id: :status_type)
+                  .where(applied_by_attack: attack_id)
+                  .select_map(:name)
+                  .join(',')
+
+      # 2) Pull all damage components for this attack
+      comps = DB.conn[:damage_components]
+                .where(attack_id: attack_id, flare_id: nil)
+                .join(
+                 :locations,
+                  Sequel[:locations][:id] => Sequel[:damage_components][:location_id]
+                )
+                .join(
+                  :critical_types,
+                  Sequel[:critical_types][:id] => Sequel[:damage_components][:critical_type]
+                )
+                .select(
+                  Sequel[:damage_components][:damage],
+                  Sequel[:damage_components][:is_fatal],
+                  Sequel[:locations][:name].as(:loc),
+                  Sequel[:damage_components][:critical_rank].as(:rank),
+                  Sequel[:critical_types][:name].as(:ctype)
+                )
+                .all
+
+      # 3) Emit header + first damage (if present), or header alone
+      if first = comps.shift
+        crit = "[#{first[:loc]} R#{first[:rank]} #{first[:ctype]}]"
+        rows << [
+          indent,
+          atk[:atype],
+          first[:damage].to_s,
+          status,
+          crit,
+          first[:is_fatal] ? 'Y' : 'N'
+        ]
+      else
+        rows << [ indent, atk[:atype], '', status, '', '' ]
+      end
+
+      # 4) Any remaining damage gets its own row
+      comps.each do |dc|
+        crit = "[#{dc[:loc]} R#{dc[:rank]} #{dc[:ctype]}]"
+        rows << [
+          indent,
+          '',
+          dc[:damage].to_s,
+          '',
+          crit,
+          dc[:is_fatal] ? 'Y' : 'N'
+        ]
+      end
+
+      # 5) Flares & nested attacks
+      DB.conn[:flare_events]
+        .where(attack_id: attack_id)
+        .order(:flare_sequence)
+        .all
+        .each do |flare|
+          name = DB.conn[:flare_types]
+                   .where(id: flare[:flare_type_id])
+                   .get(:name)
+
+          # flare header
+          rows << [ indent + 2, name, '', '', '', '' ]
+
+          if flare[:child_attack_id]
+            # recurse into the child attack
+            rows.concat format_attack_tree(flare[:child_attack_id], indent + 4)
+          else
+            # flat flare damage, one row each
+            DB.conn[:damage_components]
+              .where(flare_id: flare[:id])
+              .join(
+                :locations,
+                Sequel[:locations][:id] => Sequel[:damage_components][:location_id]
+              )
+              .join(
+                :critical_types,
+                Sequel[:critical_types][:id] => Sequel[:damage_components][:critical_type]
+              )
+              .select(
+                Sequel[:damage_components][:damage],
+                Sequel[:damage_components][:is_fatal],
+                Sequel[:locations][:name].as(:loc),
+                Sequel[:damage_components][:critical_rank].as(:rank),
+                Sequel[:critical_types][:name].as(:ctype)
+              )
+              .each do |dc|
+                crit = "[#{dc[:loc]} R#{dc[:rank]} #{dc[:ctype]}]"
+                rows << [
+                  indent + 2,
+                  '',
+                  dc[:damage].to_s,
+                  '',
+                  crit,
+                  dc[:is_fatal] ? 'Y' : 'N'
+                ]
+              end
+          end
+        end
+
+      rows
+    end
+
+    # Build the row for a normal attack_event
+    def self.format_single_attack(attack_id, indent)
+      attack = DB.conn[:attack_events]
+        .join(:attack_types, id: :attack_type_id)
+        .where(Sequel[:attack_events][:id] => attack_id)
+        .select_append(Sequel[:attack_types][:name].as(:atype))
+        .first
+
+      # DMG: prefer resolution.result_total, fallback to sum(damage_components)
+      res = DB.conn[:attack_resolutions].where(attack_id: attack_id).first
+      dmg = res && res[:result_total] || 
+            DB.conn[:damage_components].where(attack_id: attack_id, flare_id: nil)
+                                 .sum(:damage)
+                                 .to_i
+
+      # STATUS: list any status_events applied_by_attack
+      status = DB.conn[:status_events]
+                 .join(:status_types, id: :status_type)
+                 .where(applied_by_attack: attack_id)
+                 .select_map(:name)
+                 .join(',')
+
+      # CRIT STUFFS & FATAL?
+      crit_rows = DB.conn[:damage_components]
+                    .join(:locations, Sequel[:locations][:id] => Sequel[:damage_components][:location_id])
+                    .join(:critical_types, Sequel[:critical_types][:id] => Sequel[:damage_components][:critical_type])
+                    .where(Sequel[:damage_components][:attack_id] => attack_id, Sequel[:damage_components][:flare_id]  => nil)
+                    .select_map([ Sequel[:locations][:name], Sequel[:damage_components][:critical_rank], Sequel[:critical_types][:name], Sequel[:damage_components][:is_fatal] ])
+
+      crit_str  = crit_rows
+                    .map { |loc, rk, typ, _fatal| "#{loc} R#{rk} #{typ}" }
+                    .join('; ')
+      fatal     = crit_rows.any? { |_, _, _, is_f| is_f } ? 'Y' : 'N'
+
+      [ indent,
+        attack[:atype],
+        dmg.to_s,
+        status,
+        crit_str.empty? ? '' : "[#{crit_str}]",
+        fatal
+      ]
+    end
+
+    # Build the row for a flare_event without a child attack
+    def self.format_single_flare(flare, indent)
+      # total damage on that flare
+      dmg, fatal = DB.conn[:damage_components]
+                     .where(flare_id: flare[:id])
+                     .select_map([:damage, :is_fatal])
+                     .transpose
+                     .then { |dmg_arr, fat_arr| [dmg_arr.sum, fat_arr.any? ? 'Y' : 'N'] rescue [0,'N'] }
+
+      # no status for simple flares in this schema
+      crit_records = DB.conn[:damage_components]
+                       .join(:locations, Sequel[:locations][:id] => Sequel[:damage_components][:location_id])
+                       .join(:critical_types, Sequel[:critical_types][:id] => Sequel[:damage_components][:critical_type])
+                       .where(Sequel[:damage_components][:flare_id] => flare[:id])
+                       .select_map([ Sequel[:locations][:name], Sequel[:damage_components][:critical_rank], Sequel[:critical_types][:name]])
+      crit_str = crit_records
+                   .map { |loc, rk, typ| "#{loc} R#{rk} #{typ}" }
+                   .join('; ')
+
+      [
+        indent,
+        DB.conn[:flare_types].where(id: flare[:flare_type_id]).get(:name),
+        dmg.to_s,
+        '',                               # STATUS blank
+        crit_str.empty? ? '' : "[#{crit_str}]",
+        fatal
+      ]
+    end
+
+    # Helper to look up an attack_type name by attack_events.id
+    def self.fetch_attack_type_name(child_attack_id)
+      DB.conn[:attack_events]
+        .join(:attack_types, id: :attack_type_id)
+        .where(Sequel[:attack_events][:id] => child_attack_id)
+        .get(Sequel[:attack_types][:name])
+    end
+
+    # Print a fixed-width ASCII table
+    def self.print_ascii_table(header, cols, rows)
+      # string-ify & apply indent
+      table = rows.map do |indent, *cells|
+        row = cells.map(&:to_s)
+        row[0] = ' ' * indent + row[0]
+        row
+      end
+
+      # compute column widths
+      widths = cols.map.with_index do |h,i|
+        [ h.length, table.map { |r| r[i].length }.max || 0 ].max
+      end
+
+      # build separators
+      sep = '+' + widths.map { |w| '-' * (w + 2) }.join('+') + '+'
+      hdr = '| ' + cols.map.with_index { |h,i| h.ljust(widths[i]) }.join(' | ') + ' |'
+
+      msg = header + "\n"
+      msg += sep + "\n"
+      msg += hdr + "\n"
+      msg += sep + "\n"
+      table.each do |row|
+        msg +=  '| ' + row.map.with_index { |cell,i| cell.ljust(widths[i]) }.join(' | ') + ' |'  + "\n"
+      end
+      msg += sep
+      respond Lich::Messaging.mono(msg)
+    end
+  end
+end
