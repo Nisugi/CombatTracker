@@ -99,7 +99,18 @@
   
 </div>
 
+<h2>Overview</h2><div class="docstring">
+  <div class="discussion">
+    
+<p>This module provides functionality for tracking and reporting combat sessions.</p>
 
+
+  </div>
+</div>
+<div class="tags">
+  
+
+</div>
 
 
 
@@ -117,7 +128,7 @@
         <li class="public ">
   <span class="summary_signature">
     
-      <a href="#attack_report-class_method" title="attack_report (class method)">.<strong>attack_report</strong>(attack_name = nil, attack_index = nil)  &#x21d2; Object </a>
+      <a href="#attack_report-class_method" title="attack_report (class method)">.<strong>attack_report</strong>(attack_name = nil, attack_index = nil)  &#x21d2; void </a>
     
 
     
@@ -132,7 +143,7 @@
 
   
     <span class="summary_desc"><div class='inline'>
-<p>attack_name - String, e.g.</p>
+<p>Generates a report for a specific attack type and index.</p>
 </div></span>
   
 </li>
@@ -141,7 +152,7 @@
         <li class="public ">
   <span class="summary_signature">
     
-      <a href="#creature_report-class_method" title="creature_report (class method)">.<strong>creature_report</strong>(creature_arg = nil, idx = nil)  &#x21d2; Object </a>
+      <a href="#creature_report-class_method" title="creature_report (class method)">.<strong>creature_report</strong>(creature_arg = nil, idx = nil)  &#x21d2; void </a>
     
 
     
@@ -156,7 +167,7 @@
 
   
     <span class="summary_desc"><div class='inline'>
-<p>creature_arg – nil | Integer(exist_id) | String(noun) idx          – nil | Integer(1-based or negative).</p>
+<p>Generates a report for a specific creature instance based on either its exist_id or noun.</p>
 </div></span>
   
 </li>
@@ -165,7 +176,7 @@
         <li class="public ">
   <span class="summary_signature">
     
-      <a href="#flare_report-class_method" title="flare_report (class method)">.<strong>flare_report</strong>(flare_type = nil, session_id = nil)  &#x21d2; Hash </a>
+      <a href="#flare_report-class_method" title="flare_report (class method)">.<strong>flare_report</strong>(flare_type = nil, session_id = nil)  &#x21d2; Hash, void </a>
     
 
     
@@ -180,7 +191,7 @@
 
   
     <span class="summary_desc"><div class='inline'>
-<p>Flare Report Generates statistics for a specific flare type.</p>
+<p>Generates a report for a specific flare type and session.</p>
 </div></span>
   
 </li>
@@ -189,7 +200,7 @@
         <li class="public ">
   <span class="summary_signature">
     
-      <a href="#list_instance_ordinals-class_method" title="list_instance_ordinals (class method)">.<strong>list_instance_ordinals</strong>(noun, seq)  &#x21d2; Object </a>
+      <a href="#list_instance_ordinals-class_method" title="list_instance_ordinals (class method)">.<strong>list_instance_ordinals</strong>(noun, seq)  &#x21d2; void </a>
     
 
     
@@ -204,7 +215,7 @@
 
   
     <span class="summary_desc"><div class='inline'>
-<p>Helper to list all instance ordinals for a given noun.</p>
+<p>Lists the ordinals of instances for a given noun.</p>
 </div></span>
   
 </li>
@@ -213,7 +224,7 @@
         <li class="public ">
   <span class="summary_signature">
     
-      <a href="#sequence_report-class_method" title="sequence_report (class method)">.<strong>sequence_report</strong>(seq_type = nil, idx = nil)  &#x21d2; Object </a>
+      <a href="#sequence_report-class_method" title="sequence_report (class method)">.<strong>sequence_report</strong>(seq_type = nil, idx = nil)  &#x21d2; void </a>
     
 
     
@@ -228,7 +239,7 @@
 
   
     <span class="summary_desc"><div class='inline'>
-<p>sequence_report(sequence_type, index = nil) sequence_type – String name of the sequence (e.g. “FLURRY”) index         – Integer (1-based or negative), default = last.</p>
+<p>Outputs the report to the console.</p>
 </div></span>
   
 </li>
@@ -237,7 +248,7 @@
         <li class="public ">
   <span class="summary_signature">
     
-      <a href="#session_list-class_method" title="session_list (class method)">.<strong>session_list</strong>(n = 5)  &#x21d2; Object </a>
+      <a href="#session_list-class_method" title="session_list (class method)">.<strong>session_list</strong>(n = 5)  &#x21d2; void </a>
     
 
     
@@ -252,7 +263,7 @@
 
   
     <span class="summary_desc"><div class='inline'>
-<p>List the most recent combat sessions.</p>
+<p>Retrieves a list of the last n combat sessions, displaying them in a formatted table.</p>
 </div></span>
   
 </li>
@@ -261,7 +272,7 @@
         <li class="public ">
   <span class="summary_signature">
     
-      <a href="#session_report-class_method" title="session_report (class method)">.<strong>session_report</strong>(session_id = nil)  &#x21d2; Object </a>
+      <a href="#session_report-class_method" title="session_report (class method)">.<strong>session_report</strong>(session_id = nil)  &#x21d2; void </a>
     
 
     
@@ -276,7 +287,7 @@
 
   
     <span class="summary_desc"><div class='inline'>
-<p>Reports all creatures encountered in a session.</p>
+<p>Generates a detailed report for a specific combat session.</p>
 </div></span>
   
 </li>
@@ -294,7 +305,7 @@
       <div class="method_details first">
   <h3 class="signature first" id="attack_report-class_method">
   
-    .<strong>attack_report</strong>(attack_name = nil, attack_index = nil)  &#x21d2; <tt>Object</tt> 
+    .<strong>attack_report</strong>(attack_name = nil, attack_index = nil)  &#x21d2; <tt>void</tt> 
   
 
   
@@ -302,14 +313,80 @@
   
 </h3><div class="docstring">
   <div class="discussion">
-    
-<p>attack_name - String, e.g. “FIRE”, or nil; if nil, displays a list of valid options attack_id   - Integer or nil; if nil, finds the last attack of that name</p>
+    <p class="note returns_void">This method returns an undefined value.</p>
+<p>Generates a report for a specific attack type and index.</p>
 
 
   </div>
 </div>
 <div class="tags">
   
+  <div class="examples">
+    <h4 class="tag_title">Examples:</h4>
+    
+      
+      <pre class="example code"><code><span class='id identifier rubyid_attack_report'>attack_report</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>fire</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='int'>2</span><span class='rparen'>)</span></code></pre>
+    
+  </div>
+<p class="tag_title">Parameters:</p>
+<ul class="param">
+  
+    <li>
+      
+        <span class='name'>attack_name</span>
+      
+      
+        <span class='type'>(<tt>String</tt>, <tt>nil</tt>)</span>
+      
+      
+        <em class="default">(defaults to: <tt>nil</tt>)</em>
+      
+      
+        &mdash;
+        <div class='inline'>
+<p>The name of the attack to report on. If nil or invalid, usage information is displayed.</p>
+</div>
+      
+    </li>
+  
+    <li>
+      
+        <span class='name'>attack_index</span>
+      
+      
+        <span class='type'>(<tt>Integer</tt>, <tt>nil</tt>)</span>
+      
+      
+        <em class="default">(defaults to: <tt>nil</tt>)</em>
+      
+      
+        &mdash;
+        <div class='inline'>
+<p>The index of the attack to report on. If nil, the last attack is reported.</p>
+</div>
+      
+    </li>
+  
+</ul>
+
+<p class="tag_title">Raises:</p>
+<ul class="raise">
+  
+    <li>
+      
+      
+        <span class='type'>(<tt>StandardError</tt>)</span>
+      
+      
+      
+        &mdash;
+        <div class='inline'>
+<p>If an unknown attack type is provided.</p>
+</div>
+      
+    </li>
+  
+</ul>
 
 </div><table class="source_code">
   <tr>
@@ -317,32 +394,6 @@
       <pre class="lines">
 
 
-309
-310
-311
-312
-313
-314
-315
-316
-317
-318
-319
-320
-321
-322
-323
-324
-325
-326
-327
-328
-329
-330
-331
-332
-333
-334
 335
 336
 337
@@ -376,10 +427,36 @@
 365
 366
 367
-368</pre>
+368
+369
+370
+371
+372
+373
+374
+375
+376
+377
+378
+379
+380
+381
+382
+383
+384
+385
+386
+387
+388
+389
+390
+391
+392
+393
+394</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'reporter.rb', line 309</span>
+      <pre class="code"><span class="info file"># File 'reporter.rb', line 335</span>
 
 <span class='kw'>def</span> <span class='kw'>self</span><span class='period'>.</span><span class='id identifier rubyid_attack_report'>attack_report</span><span class='lparen'>(</span><span class='id identifier rubyid_attack_name'>attack_name</span> <span class='op'>=</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='id identifier rubyid_attack_index'>attack_index</span> <span class='op'>=</span> <span class='kw'>nil</span><span class='rparen'>)</span>
   <span class='comment'># 1) list of valid types
@@ -449,7 +526,7 @@
       <div class="method_details ">
   <h3 class="signature " id="creature_report-class_method">
   
-    .<strong>creature_report</strong>(creature_arg = nil, idx = nil)  &#x21d2; <tt>Object</tt> 
+    .<strong>creature_report</strong>(creature_arg = nil, idx = nil)  &#x21d2; <tt>void</tt> 
   
 
   
@@ -457,14 +534,80 @@
   
 </h3><div class="docstring">
   <div class="discussion">
-    
-<p>creature_arg – nil | Integer(exist_id) | String(noun) idx          – nil | Integer(1-based or negative)</p>
+    <p class="note returns_void">This method returns an undefined value.</p>
+<p>Generates a report for a specific creature instance based on either its exist_id or noun.</p>
 
 
   </div>
 </div>
 <div class="tags">
   
+  <div class="examples">
+    <h4 class="tag_title">Examples:</h4>
+    
+      
+      <pre class="example code"><code><span class='const'><span class='object_link'><a href="../CombatTracker.html" title="CombatTracker (module)">CombatTracker</a></span></span><span class='op'>::</span><span class='const'><span class='object_link'><a href="" title="CombatTracker::Reporter (class)">Reporter</a></span></span><span class='period'>.</span><span class='id identifier rubyid_creature_report'>creature_report</span><span class='lparen'>(</span><span class='int'>12345678</span><span class='rparen'>)</span></code></pre>
+    
+  </div>
+<p class="tag_title">Parameters:</p>
+<ul class="param">
+  
+    <li>
+      
+        <span class='name'>creature_arg</span>
+      
+      
+        <span class='type'>(<tt>Integer</tt>, <tt>String</tt>, <tt>nil</tt>)</span>
+      
+      
+        <em class="default">(defaults to: <tt>nil</tt>)</em>
+      
+      
+        &mdash;
+        <div class='inline'>
+<p>the exist_id of the creature or the noun (default is nil)</p>
+</div>
+      
+    </li>
+  
+    <li>
+      
+        <span class='name'>idx</span>
+      
+      
+        <span class='type'>(<tt>Integer</tt>, <tt>nil</tt>)</span>
+      
+      
+        <em class="default">(defaults to: <tt>nil</tt>)</em>
+      
+      
+        &mdash;
+        <div class='inline'>
+<p>the index of the creature instance if using noun mode (default is nil)</p>
+</div>
+      
+    </li>
+  
+</ul>
+
+<p class="tag_title">Raises:</p>
+<ul class="raise">
+  
+    <li>
+      
+      
+        <span class='type'>(<tt>StandardError</tt>)</span>
+      
+      
+      
+        &mdash;
+        <div class='inline'>
+<p>if the creature does not exist or if the noun is unknown</p>
+</div>
+      
+    </li>
+  
+</ul>
 
 </div><table class="source_code">
   <tr>
@@ -472,21 +615,6 @@
       <pre class="lines">
 
 
-97
-98
-99
-100
-101
-102
-103
-104
-105
-106
-107
-108
-109
-110
-111
 112
 113
 114
@@ -570,13 +698,28 @@
 192
 193
 194
-195</pre>
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'reporter.rb', line 97</span>
+      <pre class="code"><span class="info file"># File 'reporter.rb', line 112</span>
 
 <span class='kw'>def</span> <span class='kw'>self</span><span class='period'>.</span><span class='id identifier rubyid_creature_report'>creature_report</span><span class='lparen'>(</span><span class='id identifier rubyid_creature_arg'>creature_arg</span> <span class='op'>=</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='id identifier rubyid_idx'>idx</span> <span class='op'>=</span> <span class='kw'>nil</span><span class='rparen'>)</span>
-  <span class='comment'># 1) No args → usage
+  <span class='comment'># 1) No args ? usage
 </span>  <span class='kw'>unless</span> <span class='id identifier rubyid_creature_arg'>creature_arg</span>
     <span class='id identifier rubyid_respond'>respond</span> <span class='heredoc_beg'>&lt;&lt;~USAGE</span>
 <span class='tstring_content'>
@@ -608,7 +751,7 @@
       <span class='kw'>return</span>
     <span class='kw'>end</span>
 
-    <span class='comment'># we’ve got our creature_instance row
+    <span class='comment'># we?ve got our creature_instance row
 </span>    <span class='id identifier rubyid_noun'>noun</span>  <span class='op'>=</span> <span class='id identifier rubyid_ci'>ci</span><span class='lbracket'>[</span><span class='symbol'>:noun</span><span class='rbracket'>]</span>
     <span class='id identifier rubyid_ci_id'>ci_id</span> <span class='op'>=</span> <span class='id identifier rubyid_ci'>ci</span><span class='lbracket'>[</span><span class='symbol'>:id</span><span class='rbracket'>]</span>
     <span class='id identifier rubyid_disp'>disp</span>  <span class='op'>=</span> <span class='id identifier rubyid_ci'>ci</span><span class='lbracket'>[</span><span class='symbol'>:display_name</span><span class='rbracket'>]</span>
@@ -620,7 +763,7 @@
     <span class='comment'># build noun list &amp; validate
 </span>    <span class='id identifier rubyid_all'>all</span> <span class='op'>=</span> <span class='const'><span class='object_link'><a href="DB.html" title="CombatTracker::DB (module)">DB</a></span></span><span class='period'>.</span><span class='id identifier rubyid_conn'><span class='object_link'><a href="DB.html#conn-instance_method" title="CombatTracker::DB#conn (method)">conn</a></span></span><span class='lbracket'>[</span><span class='symbol'>:creature_instances</span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_select_map'>select_map</span><span class='lparen'>(</span><span class='symbol'>:noun</span><span class='rparen'>)</span><span class='period'>.</span><span class='id identifier rubyid_uniq'>uniq</span>
     <span class='kw'>unless</span> <span class='id identifier rubyid_all'>all</span><span class='period'>.</span><span class='id identifier rubyid_map'>map</span><span class='lparen'>(</span><span class='op'>&amp;</span><span class='symbol'>:upcase</span><span class='rparen'>)</span><span class='period'>.</span><span class='id identifier rubyid_include?'>include?</span><span class='lparen'>(</span><span class='id identifier rubyid_noun'>noun</span><span class='period'>.</span><span class='id identifier rubyid_upcase'>upcase</span><span class='rparen'>)</span>
-      <span class='id identifier rubyid_respond'>respond</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>Unknown noun “</span><span class='embexpr_beg'>#{</span><span class='id identifier rubyid_noun'>noun</span><span class='embexpr_end'>}</span><span class='tstring_content'>”. Available nouns:</span><span class='tstring_end'>&quot;</span></span>
+      <span class='id identifier rubyid_respond'>respond</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>Unknown noun ?</span><span class='embexpr_beg'>#{</span><span class='id identifier rubyid_noun'>noun</span><span class='embexpr_end'>}</span><span class='tstring_content'>?. Available nouns:</span><span class='tstring_end'>&quot;</span></span>
       <span class='id identifier rubyid_list_nouns'>list_nouns</span>
       <span class='kw'>return</span>
     <span class='kw'>end</span>
@@ -632,7 +775,7 @@
             <span class='period'>.</span><span class='id identifier rubyid_order'>order</span><span class='lparen'>(</span><span class='symbol'>:first_seen_at</span><span class='rparen'>)</span>
             <span class='period'>.</span><span class='id identifier rubyid_select_map'>select_map</span><span class='lparen'>(</span><span class='symbol'>:id</span><span class='rparen'>)</span>
     <span class='kw'>if</span> <span class='id identifier rubyid_seq'>seq</span><span class='period'>.</span><span class='id identifier rubyid_empty?'>empty?</span>
-      <span class='id identifier rubyid_respond'>respond</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>No instances of “</span><span class='embexpr_beg'>#{</span><span class='id identifier rubyid_noun'>noun</span><span class='embexpr_end'>}</span><span class='tstring_content'>” found.</span><span class='tstring_end'>&quot;</span></span>
+      <span class='id identifier rubyid_respond'>respond</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>No instances of ?</span><span class='embexpr_beg'>#{</span><span class='id identifier rubyid_noun'>noun</span><span class='embexpr_end'>}</span><span class='tstring_content'>? found.</span><span class='tstring_end'>&quot;</span></span>
       <span class='kw'>return</span>
     <span class='kw'>end</span>
 
@@ -646,7 +789,7 @@
 
     <span class='id identifier rubyid_ci_id'>ci_id</span> <span class='op'>=</span> <span class='id identifier rubyid_seq'>seq</span><span class='lbracket'>[</span><span class='id identifier rubyid_zero'>zero</span><span class='rbracket'>]</span>
     <span class='id identifier rubyid_ci'>ci</span>    <span class='op'>=</span> <span class='const'><span class='object_link'><a href="DB.html" title="CombatTracker::DB (module)">DB</a></span></span><span class='period'>.</span><span class='id identifier rubyid_conn'><span class='object_link'><a href="DB.html#conn-instance_method" title="CombatTracker::DB#conn (method)">conn</a></span></span><span class='lbracket'>[</span><span class='symbol'>:creature_instances</span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_where'>where</span><span class='lparen'>(</span><span class='label'>id:</span> <span class='id identifier rubyid_ci_id'>ci_id</span><span class='rparen'>)</span><span class='period'>.</span><span class='id identifier rubyid_first'>first</span>
-    <span class='id identifier rubyid_header'>header</span> <span class='op'>=</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>Report for </span><span class='embexpr_beg'>#{</span><span class='id identifier rubyid_noun'>noun</span><span class='period'>.</span><span class='id identifier rubyid_upcase'>upcase</span><span class='embexpr_end'>}</span><span class='tstring_content'> (</span><span class='embexpr_beg'>#{</span><span class='id identifier rubyid_zero'>zero</span><span class='op'>+</span><span class='int'>1</span><span class='embexpr_end'>}</span><span class='tstring_content'>/</span><span class='embexpr_beg'>#{</span><span class='id identifier rubyid_seq'>seq</span><span class='period'>.</span><span class='id identifier rubyid_size'>size</span><span class='embexpr_end'>}</span><span class='tstring_content'>) ID:</span><span class='embexpr_beg'>#{</span><span class='id identifier rubyid_ci_id'>ci_id</span><span class='embexpr_end'>}</span><span class='tstring_content'> “</span><span class='embexpr_beg'>#{</span><span class='id identifier rubyid_ci'>ci</span><span class='lbracket'>[</span><span class='symbol'>:display_name</span><span class='rbracket'>]</span><span class='embexpr_end'>}</span><span class='tstring_content'>”</span><span class='tstring_end'>&quot;</span></span>
+    <span class='id identifier rubyid_header'>header</span> <span class='op'>=</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>Report for </span><span class='embexpr_beg'>#{</span><span class='id identifier rubyid_noun'>noun</span><span class='period'>.</span><span class='id identifier rubyid_upcase'>upcase</span><span class='embexpr_end'>}</span><span class='tstring_content'> (</span><span class='embexpr_beg'>#{</span><span class='id identifier rubyid_zero'>zero</span><span class='op'>+</span><span class='int'>1</span><span class='embexpr_end'>}</span><span class='tstring_content'>/</span><span class='embexpr_beg'>#{</span><span class='id identifier rubyid_seq'>seq</span><span class='period'>.</span><span class='id identifier rubyid_size'>size</span><span class='embexpr_end'>}</span><span class='tstring_content'>) ID:</span><span class='embexpr_beg'>#{</span><span class='id identifier rubyid_ci_id'>ci_id</span><span class='embexpr_end'>}</span><span class='tstring_content'> ?</span><span class='embexpr_beg'>#{</span><span class='id identifier rubyid_ci'>ci</span><span class='lbracket'>[</span><span class='symbol'>:display_name</span><span class='rbracket'>]</span><span class='embexpr_end'>}</span><span class='tstring_content'>?</span><span class='tstring_end'>&quot;</span></span>
   <span class='kw'>end</span>
 
   <span class='comment'># 4) Gather every top-level attack on that creature_instance
@@ -657,20 +800,20 @@
   <span class='id identifier rubyid_attack_ids'>attack_ids</span> <span class='op'>=</span> <span class='const'><span class='object_link'><a href="DB.html" title="CombatTracker::DB (module)">DB</a></span></span><span class='period'>.</span><span class='id identifier rubyid_conn'><span class='object_link'><a href="DB.html#conn-instance_method" title="CombatTracker::DB#conn (method)">conn</a></span></span><span class='lbracket'>[</span><span class='symbol'>:attack_events</span><span class='rbracket'>]</span>
            <span class='period'>.</span><span class='id identifier rubyid_where'>where</span><span class='lparen'>(</span><span class='label'>creature_instance_id:</span> <span class='id identifier rubyid_ci_id'>ci_id</span><span class='rparen'>)</span>
            <span class='period'>.</span><span class='id identifier rubyid_exclude'>exclude</span><span class='lparen'>(</span><span class='label'>id:</span> <span class='id identifier rubyid_child_ids'>child_ids</span><span class='rparen'>)</span>
-    <span class='period'>.</span><span class='id identifier rubyid_order'>order</span><span class='lparen'>(</span><span class='symbol'>:sequence</span><span class='rparen'>)</span>
-    <span class='period'>.</span><span class='id identifier rubyid_select_map'>select_map</span><span class='lparen'>(</span><span class='symbol'>:id</span><span class='rparen'>)</span>
+           <span class='period'>.</span><span class='id identifier rubyid_order'>order</span><span class='lparen'>(</span><span class='symbol'>:sequence</span><span class='rparen'>)</span>
+           <span class='period'>.</span><span class='id identifier rubyid_select_map'>select_map</span><span class='lparen'>(</span><span class='symbol'>:id</span><span class='rparen'>)</span>
 
   <span class='id identifier rubyid_rows'>rows</span> <span class='op'>=</span> <span class='lbracket'>[</span><span class='rbracket'>]</span>
   <span class='id identifier rubyid_attack_ids'>attack_ids</span><span class='period'>.</span><span class='id identifier rubyid_each_with_index'>each_with_index</span> <span class='kw'>do</span> <span class='op'>|</span><span class='id identifier rubyid_aid'>aid</span><span class='comma'>,</span> <span class='id identifier rubyid_idx'>idx</span><span class='op'>|</span>
     <span class='id identifier rubyid_rows'>rows</span><span class='period'>.</span><span class='id identifier rubyid_concat'>concat</span> <span class='id identifier rubyid_format_attack_tree'>format_attack_tree</span><span class='lparen'>(</span><span class='id identifier rubyid_aid'>aid</span><span class='rparen'>)</span>
     <span class='id identifier rubyid_rows'>rows</span> <span class='op'>&lt;&lt;</span> <span class='lbracket'>[</span><span class='tstring'><span class='tstring_beg'>&#39;</span><span class='tstring_end'>&#39;</span></span><span class='comma'>,</span><span class='tstring'><span class='tstring_beg'>&#39;</span><span class='tstring_end'>&#39;</span></span><span class='comma'>,</span><span class='tstring'><span class='tstring_beg'>&#39;</span><span class='tstring_end'>&#39;</span></span><span class='comma'>,</span><span class='tstring'><span class='tstring_beg'>&#39;</span><span class='tstring_end'>&#39;</span></span><span class='comma'>,</span><span class='tstring'><span class='tstring_beg'>&#39;</span><span class='tstring_end'>&#39;</span></span><span class='rbracket'>]</span> <span class='kw'>if</span> <span class='id identifier rubyid_idx'>idx</span> <span class='op'>&lt;</span> <span class='id identifier rubyid_attack_ids'>attack_ids</span><span class='period'>.</span><span class='id identifier rubyid_size'>size</span> <span class='op'>-</span> <span class='int'>1</span>
-    <span class='kw'>end</span>
+  <span class='kw'>end</span>
 
   <span class='kw'>if</span> <span class='id identifier rubyid_rows'>rows</span><span class='period'>.</span><span class='id identifier rubyid_empty?'>empty?</span>
     <span class='id identifier rubyid_respond'>respond</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='embexpr_beg'>#{</span><span class='id identifier rubyid_header'>header</span><span class='embexpr_end'>}</span><span class='tstring_content'>\n\n  (no attacks recorded)\n</span><span class='tstring_end'>&quot;</span></span>
   <span class='kw'>else</span>
     <span class='id identifier rubyid_print_ascii_table'>print_ascii_table</span><span class='lparen'>(</span><span class='id identifier rubyid_header'>header</span><span class='comma'>,</span>
-    <span class='qwords_beg'>%w[</span><span class='tstring_content'>Attack</span><span class='words_sep'> </span><span class='tstring_content'>DMG</span><span class='words_sep'> </span><span class='tstring_content'>STATUS</span><span class='words_sep'> </span><span class='tstring_content'>CRIT_STUFFS</span><span class='words_sep'> </span><span class='tstring_content'>FATAL?</span><span class='tstring_end'>]</span></span><span class='comma'>,</span>
+                      <span class='qwords_beg'>%w[</span><span class='tstring_content'>Attack</span><span class='words_sep'> </span><span class='tstring_content'>DMG</span><span class='words_sep'> </span><span class='tstring_content'>STATUS</span><span class='words_sep'> </span><span class='tstring_content'>CRIT_STUFFS</span><span class='words_sep'> </span><span class='tstring_content'>FATAL?</span><span class='tstring_end'>]</span></span><span class='comma'>,</span>
                       <span class='id identifier rubyid_rows'>rows</span><span class='rparen'>)</span>
   <span class='kw'>end</span>
 <span class='kw'>end</span></pre>
@@ -682,7 +825,7 @@
       <div class="method_details ">
   <h3 class="signature " id="flare_report-class_method">
   
-    .<strong>flare_report</strong>(flare_type = nil, session_id = nil)  &#x21d2; <tt>Hash</tt> 
+    .<strong>flare_report</strong>(flare_type = nil, session_id = nil)  &#x21d2; <tt>Hash</tt>, <tt>void</tt> 
   
 
   
@@ -691,13 +834,21 @@
 </h3><div class="docstring">
   <div class="discussion">
     
-<p>Flare Report Generates statistics for a specific flare type</p>
+<p>Generates a report for a specific flare type and session.</p>
 
 
   </div>
 </div>
 <div class="tags">
-  <p class="tag_title">Parameters:</p>
+  
+  <div class="examples">
+    <h4 class="tag_title">Examples:</h4>
+    
+      
+      <pre class="example code"><code><span class='id identifier rubyid_flare_report'>flare_report</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>BRIAR</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='int'>2</span><span class='rparen'>)</span></code></pre>
+    
+  </div>
+<p class="tag_title">Parameters:</p>
 <ul class="param">
   
     <li>
@@ -705,7 +856,7 @@
         <span class='name'>flare_type</span>
       
       
-        <span class='type'>(<tt>String</tt>)</span>
+        <span class='type'>(<tt>String</tt>, <tt>nil</tt>)</span>
       
       
         <em class="default">(defaults to: <tt>nil</tt>)</em>
@@ -713,7 +864,7 @@
       
         &mdash;
         <div class='inline'>
-<p>the name of the flare type to report on (case insensitive)</p>
+<p>The type of flare to report on. If nil, usage information is displayed.</p>
 </div>
       
     </li>
@@ -723,7 +874,7 @@
         <span class='name'>session_id</span>
       
       
-        <span class='type'>(<tt>Integer</tt>)</span>
+        <span class='type'>(<tt>Integer</tt>, <tt>nil</tt>)</span>
       
       
         <em class="default">(defaults to: <tt>nil</tt>)</em>
@@ -731,7 +882,7 @@
       
         &mdash;
         <div class='inline'>
-<p>optional session_id to filter by</p>
+<p>The ID of the session to filter the report by. If nil, all sessions are included.</p>
 </div>
       
     </li>
@@ -744,13 +895,31 @@
     <li>
       
       
-        <span class='type'>(<tt>Hash</tt>)</span>
+        <span class='type'>(<tt>Hash</tt>, <tt>void</tt>)</span>
       
       
       
         &mdash;
         <div class='inline'>
-<p>the flare report data</p>
+<p>Returns a report hash or outputs the report to the console.</p>
+</div>
+      
+    </li>
+  
+</ul>
+<p class="tag_title">Raises:</p>
+<ul class="raise">
+  
+    <li>
+      
+      
+        <span class='type'>(<tt>StandardError</tt>)</span>
+      
+      
+      
+        &mdash;
+        <div class='inline'>
+<p>If an unknown flare type is provided or if an error occurs during report generation.</p>
 </div>
       
     </li>
@@ -763,34 +932,6 @@
       <pre class="lines">
 
 
-376
-377
-378
-379
-380
-381
-382
-383
-384
-385
-386
-387
-388
-389
-390
-391
-392
-393
-394
-395
-396
-397
-398
-399
-400
-401
-402
-403
 404
 405
 406
@@ -898,10 +1039,38 @@
 508
 509
 510
-511</pre>
+511
+512
+513
+514
+515
+516
+517
+518
+519
+520
+521
+522
+523
+524
+525
+526
+527
+528
+529
+530
+531
+532
+533
+534
+535
+536
+537
+538
+539</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'reporter.rb', line 376</span>
+      <pre class="code"><span class="info file"># File 'reporter.rb', line 404</span>
 
 <span class='kw'>def</span> <span class='kw'>self</span><span class='period'>.</span><span class='id identifier rubyid_flare_report'>flare_report</span><span class='lparen'>(</span><span class='id identifier rubyid_flare_type'>flare_type</span> <span class='op'>=</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='id identifier rubyid_session_id'>session_id</span> <span class='op'>=</span> <span class='kw'>nil</span><span class='rparen'>)</span>
   <span class='comment'># 1) no args -&gt; usage + list of flare types
@@ -1047,7 +1216,7 @@
       <div class="method_details ">
   <h3 class="signature " id="list_instance_ordinals-class_method">
   
-    .<strong>list_instance_ordinals</strong>(noun, seq)  &#x21d2; <tt>Object</tt> 
+    .<strong>list_instance_ordinals</strong>(noun, seq)  &#x21d2; <tt>void</tt> 
   
 
   
@@ -1055,14 +1224,58 @@
   
 </h3><div class="docstring">
   <div class="discussion">
-    
-<p>Helper to list all instance ordinals for a given noun</p>
+    <p class="note returns_void">This method returns an undefined value.</p>
+<p>Lists the ordinals of instances for a given noun.</p>
 
 
   </div>
 </div>
 <div class="tags">
   
+  <div class="examples">
+    <h4 class="tag_title">Examples:</h4>
+    
+      
+      <pre class="example code"><code><span class='const'><span class='object_link'><a href="../CombatTracker.html" title="CombatTracker (module)">CombatTracker</a></span></span><span class='op'>::</span><span class='const'><span class='object_link'><a href="" title="CombatTracker::Reporter (class)">Reporter</a></span></span><span class='period'>.</span><span class='id identifier rubyid_list_instance_ordinals'>list_instance_ordinals</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>skald</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='lbracket'>[</span><span class='int'>1</span><span class='comma'>,</span> <span class='int'>2</span><span class='comma'>,</span> <span class='int'>3</span><span class='rbracket'>]</span><span class='rparen'>)</span></code></pre>
+    
+  </div>
+<p class="tag_title">Parameters:</p>
+<ul class="param">
+  
+    <li>
+      
+        <span class='name'>noun</span>
+      
+      
+        <span class='type'>(<tt>String</tt>)</span>
+      
+      
+      
+        &mdash;
+        <div class='inline'>
+<p>the noun for which to list instances</p>
+</div>
+      
+    </li>
+  
+    <li>
+      
+        <span class='name'>seq</span>
+      
+      
+        <span class='type'>(<tt>Array&lt;Integer&gt;</tt>)</span>
+      
+      
+      
+        &mdash;
+        <div class='inline'>
+<p>the sequence of instance IDs</p>
+</div>
+      
+    </li>
+  
+</ul>
+
 
 </div><table class="source_code">
   <tr>
@@ -1070,19 +1283,19 @@
       <pre class="lines">
 
 
-198
-199
-200
-201
-202
-203
-204
-205
-206
-207</pre>
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'reporter.rb', line 198</span>
+      <pre class="code"><span class="info file"># File 'reporter.rb', line 219</span>
 
 <span class='kw'>def</span> <span class='kw'>self</span><span class='period'>.</span><span class='id identifier rubyid_list_instance_ordinals'>list_instance_ordinals</span><span class='lparen'>(</span><span class='id identifier rubyid_noun'>noun</span><span class='comma'>,</span> <span class='id identifier rubyid_seq'>seq</span><span class='rparen'>)</span>
   <span class='id identifier rubyid_msg'>msg</span> <span class='op'>=</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>\n&gt; </span><span class='embexpr_beg'>#{</span><span class='id identifier rubyid_noun'>noun</span><span class='embexpr_end'>}</span><span class='tstring_content'> Instances:</span><span class='tstring_end'>&quot;</span></span>
@@ -1102,7 +1315,7 @@
       <div class="method_details ">
   <h3 class="signature " id="sequence_report-class_method">
   
-    .<strong>sequence_report</strong>(seq_type = nil, idx = nil)  &#x21d2; <tt>Object</tt> 
+    .<strong>sequence_report</strong>(seq_type = nil, idx = nil)  &#x21d2; <tt>void</tt> 
   
 
   
@@ -1110,14 +1323,80 @@
   
 </h3><div class="docstring">
   <div class="discussion">
-    
-<p>sequence_report(sequence_type, index = nil) sequence_type – String name of the sequence (e.g. “FLURRY”) index         – Integer (1-based or negative), default = last</p>
+    <p class="note returns_void">This method returns an undefined value.</p>
+<p>Returns Outputs the report to the console.</p>
 
 
   </div>
 </div>
 <div class="tags">
   
+  <div class="examples">
+    <h4 class="tag_title">Examples:</h4>
+    
+      
+      <pre class="example code"><code><span class='id identifier rubyid_sequence_report'>sequence_report</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>FLURRY</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='int'>2</span><span class='rparen'>)</span></code></pre>
+    
+  </div>
+<p class="tag_title">Parameters:</p>
+<ul class="param">
+  
+    <li>
+      
+        <span class='name'>seq_type</span>
+      
+      
+        <span class='type'>(<tt>String</tt>, <tt>nil</tt>)</span>
+      
+      
+        <em class="default">(defaults to: <tt>nil</tt>)</em>
+      
+      
+        &mdash;
+        <div class='inline'>
+<p>The type of sequence to report on. If nil, usage information is displayed.</p>
+</div>
+      
+    </li>
+  
+    <li>
+      
+        <span class='name'>idx</span>
+      
+      
+        <span class='type'>(<tt>Integer</tt>, <tt>nil</tt>)</span>
+      
+      
+        <em class="default">(defaults to: <tt>nil</tt>)</em>
+      
+      
+        &mdash;
+        <div class='inline'>
+<p>The index of the sequence to report on. If nil, the last sequence is reported.</p>
+</div>
+      
+    </li>
+  
+</ul>
+
+<p class="tag_title">Raises:</p>
+<ul class="raise">
+  
+    <li>
+      
+      
+        <span class='type'>(<tt>StandardError</tt>)</span>
+      
+      
+      
+        &mdash;
+        <div class='inline'>
+<p>If an unknown sequence type is provided.</p>
+</div>
+      
+    </li>
+  
+</ul>
 
 </div><table class="source_code">
   <tr>
@@ -1125,32 +1404,6 @@
       <pre class="lines">
 
 
-212
-213
-214
-215
-216
-217
-218
-219
-220
-221
-222
-223
-224
-225
-226
-227
-228
-229
-230
-231
-232
-233
-234
-235
-236
-237
 238
 239
 240
@@ -1218,14 +1471,33 @@
 302
 303
 304
-305</pre>
+305
+306
+307
+308
+309
+310
+311
+312
+313
+314
+315
+316
+317
+318
+319
+320
+321
+322
+323
+324
+325</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'reporter.rb', line 212</span>
+      <pre class="code"><span class="info file"># File 'reporter.rb', line 238</span>
 
 <span class='kw'>def</span> <span class='kw'>self</span><span class='period'>.</span><span class='id identifier rubyid_sequence_report'>sequence_report</span><span class='lparen'>(</span><span class='id identifier rubyid_seq_type'>seq_type</span> <span class='op'>=</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='id identifier rubyid_idx'>idx</span> <span class='op'>=</span> <span class='kw'>nil</span><span class='rparen'>)</span>
-  <span class='comment'># 1) usage if no sequence type given
-</span>  <span class='id identifier rubyid_types'>types</span> <span class='op'>=</span> <span class='const'><span class='object_link'><a href="DB.html" title="CombatTracker::DB (module)">DB</a></span></span><span class='period'>.</span><span class='id identifier rubyid_conn'><span class='object_link'><a href="DB.html#conn-instance_method" title="CombatTracker::DB#conn (method)">conn</a></span></span><span class='lbracket'>[</span><span class='symbol'>:sequence_types</span><span class='rbracket'>]</span>
+  <span class='id identifier rubyid_types'>types</span> <span class='op'>=</span> <span class='const'><span class='object_link'><a href="DB.html" title="CombatTracker::DB (module)">DB</a></span></span><span class='period'>.</span><span class='id identifier rubyid_conn'><span class='object_link'><a href="DB.html#conn-instance_method" title="CombatTracker::DB#conn (method)">conn</a></span></span><span class='lbracket'>[</span><span class='symbol'>:sequence_types</span><span class='rbracket'>]</span>
               <span class='period'>.</span><span class='id identifier rubyid_select_map'>select_map</span><span class='lparen'>(</span><span class='symbol'>:name</span><span class='rparen'>)</span>
               <span class='period'>.</span><span class='id identifier rubyid_uniq'>uniq</span>
               <span class='period'>.</span><span class='id identifier rubyid_sort_by'>sort_by</span><span class='lparen'>(</span><span class='op'>&amp;</span><span class='symbol'>:downcase</span><span class='rparen'>)</span>
@@ -1245,16 +1517,14 @@
     <span class='kw'>return</span>
   <span class='kw'>end</span>
 
-  <span class='comment'># 2) validate type (case-insensitive)
-</span>  <span class='id identifier rubyid_st'>st</span> <span class='op'>=</span> <span class='id identifier rubyid_types'>types</span><span class='period'>.</span><span class='id identifier rubyid_find'>find</span> <span class='lbrace'>{</span> <span class='op'>|</span><span class='id identifier rubyid_n'>n</span><span class='op'>|</span> <span class='id identifier rubyid_n'>n</span><span class='period'>.</span><span class='id identifier rubyid_casecmp?'>casecmp?</span><span class='lparen'>(</span><span class='id identifier rubyid_seq_type'>seq_type</span><span class='period'>.</span><span class='id identifier rubyid_to_s'>to_s</span><span class='rparen'>)</span> <span class='rbrace'>}</span>
+  <span class='id identifier rubyid_st'>st</span> <span class='op'>=</span> <span class='id identifier rubyid_types'>types</span><span class='period'>.</span><span class='id identifier rubyid_find'>find</span> <span class='lbrace'>{</span> <span class='op'>|</span><span class='id identifier rubyid_n'>n</span><span class='op'>|</span> <span class='id identifier rubyid_n'>n</span><span class='period'>.</span><span class='id identifier rubyid_casecmp?'>casecmp?</span><span class='lparen'>(</span><span class='id identifier rubyid_seq_type'>seq_type</span><span class='period'>.</span><span class='id identifier rubyid_to_s'>to_s</span><span class='rparen'>)</span> <span class='rbrace'>}</span>
   <span class='kw'>unless</span> <span class='id identifier rubyid_st'>st</span>
     <span class='id identifier rubyid_puts'>puts</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>Unknown sequence type </span><span class='embexpr_beg'>#{</span><span class='id identifier rubyid_seq_type'>seq_type</span><span class='embexpr_end'>}</span><span class='tstring_content'>. Available:</span><span class='tstring_end'>&quot;</span></span>
     <span class='id identifier rubyid_list_sequence_types'>list_sequence_types</span>
     <span class='kw'>return</span>
   <span class='kw'>end</span>
 
-  <span class='comment'># 3) fetch all sequence_event IDs of that type
-</span>  <span class='id identifier rubyid_seq_ids'>seq_ids</span> <span class='op'>=</span> <span class='const'><span class='object_link'><a href="DB.html" title="CombatTracker::DB (module)">DB</a></span></span><span class='period'>.</span><span class='id identifier rubyid_conn'><span class='object_link'><a href="DB.html#conn-instance_method" title="CombatTracker::DB#conn (method)">conn</a></span></span><span class='lbracket'>[</span><span class='symbol'>:sequence_events</span><span class='rbracket'>]</span>
+  <span class='id identifier rubyid_seq_ids'>seq_ids</span> <span class='op'>=</span> <span class='const'><span class='object_link'><a href="DB.html" title="CombatTracker::DB (module)">DB</a></span></span><span class='period'>.</span><span class='id identifier rubyid_conn'><span class='object_link'><a href="DB.html#conn-instance_method" title="CombatTracker::DB#conn (method)">conn</a></span></span><span class='lbracket'>[</span><span class='symbol'>:sequence_events</span><span class='rbracket'>]</span>
                <span class='period'>.</span><span class='id identifier rubyid_join'>join</span><span class='lparen'>(</span><span class='symbol'>:sequence_types</span><span class='comma'>,</span> <span class='label'>id:</span> <span class='symbol'>:sequence_type_id</span><span class='rparen'>)</span>
                <span class='period'>.</span><span class='id identifier rubyid_where'>where</span><span class='lparen'>(</span><span class='const'>Sequel</span><span class='lbracket'>[</span><span class='symbol'>:sequence_types</span><span class='rbracket'>]</span><span class='lbracket'>[</span><span class='symbol'>:name</span><span class='rbracket'>]</span> <span class='op'>=&gt;</span> <span class='id identifier rubyid_st'>st</span><span class='rparen'>)</span>
                <span class='period'>.</span><span class='id identifier rubyid_order'>order</span><span class='lparen'>(</span><span class='const'>Sequel</span><span class='lbracket'>[</span><span class='symbol'>:sequence_events</span><span class='rbracket'>]</span><span class='lbracket'>[</span><span class='symbol'>:id</span><span class='rbracket'>]</span><span class='rparen'>)</span>
@@ -1265,8 +1535,7 @@
     <span class='kw'>return</span>
   <span class='kw'>end</span>
 
-  <span class='comment'># 4) pick the desired index
-</span>  <span class='id identifier rubyid_pos'>pos</span> <span class='op'>=</span> <span class='kw'>if</span> <span class='id identifier rubyid_idx'>idx</span>
+  <span class='id identifier rubyid_pos'>pos</span> <span class='op'>=</span> <span class='kw'>if</span> <span class='id identifier rubyid_idx'>idx</span>
     <span class='id identifier rubyid_i'>i</span> <span class='op'>=</span> <span class='id identifier rubyid_idx'>idx</span><span class='period'>.</span><span class='id identifier rubyid_to_i'>to_i</span>
     <span class='id identifier rubyid_i'>i</span> <span class='op'>&gt;</span> <span class='int'>0</span> <span class='op'>?</span> <span class='lparen'>(</span><span class='id identifier rubyid_i'>i</span><span class='op'>-</span><span class='int'>1</span><span class='rparen'>)</span> <span class='op'>:</span> <span class='lparen'>(</span><span class='id identifier rubyid_seq_ids'>seq_ids</span><span class='period'>.</span><span class='id identifier rubyid_size'>size</span> <span class='op'>+</span> <span class='id identifier rubyid_i'>i</span><span class='rparen'>)</span>
   <span class='kw'>else</span>
@@ -1282,39 +1551,37 @@
   <span class='id identifier rubyid_chosen_id'>chosen_id</span> <span class='op'>=</span> <span class='id identifier rubyid_seq_ids'>seq_ids</span><span class='lbracket'>[</span><span class='id identifier rubyid_pos'>pos</span><span class='rbracket'>]</span>
   <span class='id identifier rubyid_header'>header</span>    <span class='op'>=</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>Sequence </span><span class='embexpr_beg'>#{</span><span class='id identifier rubyid_st'>st</span><span class='period'>.</span><span class='id identifier rubyid_upcase'>upcase</span><span class='embexpr_end'>}</span><span class='tstring_content'> (</span><span class='embexpr_beg'>#{</span><span class='id identifier rubyid_pos'>pos</span><span class='op'>+</span><span class='int'>1</span><span class='embexpr_end'>}</span><span class='tstring_content'>/</span><span class='embexpr_beg'>#{</span><span class='id identifier rubyid_seq_ids'>seq_ids</span><span class='period'>.</span><span class='id identifier rubyid_size'>size</span><span class='embexpr_end'>}</span><span class='tstring_content'>) - ID </span><span class='embexpr_beg'>#{</span><span class='id identifier rubyid_chosen_id'>chosen_id</span><span class='embexpr_end'>}</span><span class='tstring_end'>&quot;</span></span>
 
-  <span class='comment'># 5) gather all attack_events in order of sequence_step
-</span>  <span class='id identifier rubyid_atk_ids'>atk_ids</span> <span class='op'>=</span> <span class='const'><span class='object_link'><a href="DB.html" title="CombatTracker::DB (module)">DB</a></span></span><span class='period'>.</span><span class='id identifier rubyid_conn'><span class='object_link'><a href="DB.html#conn-instance_method" title="CombatTracker::DB#conn (method)">conn</a></span></span><span class='lbracket'>[</span><span class='symbol'>:attack_events</span><span class='rbracket'>]</span>
-               <span class='period'>.</span><span class='id identifier rubyid_where'>where</span><span class='lparen'>(</span><span class='label'>sequence_event_id:</span> <span class='id identifier rubyid_chosen_id'>chosen_id</span><span class='rparen'>)</span>
-               <span class='period'>.</span><span class='id identifier rubyid_order'>order</span><span class='lparen'>(</span><span class='symbol'>:sequence_step</span><span class='rparen'>)</span>
-               <span class='period'>.</span><span class='id identifier rubyid_select_map'>select_map</span><span class='lparen'>(</span><span class='symbol'>:id</span><span class='rparen'>)</span>
+  <span class='id identifier rubyid_child_ids'>child_ids</span> <span class='op'>=</span> <span class='const'><span class='object_link'><a href="DB.html" title="CombatTracker::DB (module)">DB</a></span></span><span class='period'>.</span><span class='id identifier rubyid_conn'><span class='object_link'><a href="DB.html#conn-instance_method" title="CombatTracker::DB#conn (method)">conn</a></span></span><span class='lbracket'>[</span><span class='symbol'>:flare_events</span><span class='rbracket'>]</span>
+                <span class='period'>.</span><span class='id identifier rubyid_where'>where</span><span class='lparen'>(</span><span class='const'>Sequel</span><span class='period'>.</span><span class='op'>~</span><span class='lparen'>(</span><span class='label'>child_attack_id:</span> <span class='kw'>nil</span><span class='rparen'>)</span><span class='rparen'>)</span>
+                <span class='period'>.</span><span class='id identifier rubyid_select_map'>select_map</span><span class='lparen'>(</span><span class='symbol'>:child_attack_id</span><span class='rparen'>)</span>
+
+  <span class='id identifier rubyid_atk_ids'>atk_ids</span> <span class='op'>=</span> <span class='const'><span class='object_link'><a href="DB.html" title="CombatTracker::DB (module)">DB</a></span></span><span class='period'>.</span><span class='id identifier rubyid_conn'><span class='object_link'><a href="DB.html#conn-instance_method" title="CombatTracker::DB#conn (method)">conn</a></span></span><span class='lbracket'>[</span><span class='symbol'>:attack_events</span><span class='rbracket'>]</span>
+                  <span class='period'>.</span><span class='id identifier rubyid_where'>where</span><span class='lparen'>(</span><span class='label'>sequence_event_id:</span> <span class='id identifier rubyid_chosen_id'>chosen_id</span><span class='rparen'>)</span>
+                  <span class='period'>.</span><span class='id identifier rubyid_exclude'>exclude</span><span class='lparen'>(</span><span class='label'>id:</span> <span class='id identifier rubyid_child_ids'>child_ids</span><span class='rparen'>)</span>
+                  <span class='period'>.</span><span class='id identifier rubyid_order'>order</span><span class='lparen'>(</span><span class='symbol'>:sequence_step</span><span class='rparen'>)</span>
+                  <span class='period'>.</span><span class='id identifier rubyid_select_map'>select_map</span><span class='lparen'>(</span><span class='symbol'>:id</span><span class='rparen'>)</span>
 
   <span class='kw'>if</span> <span class='id identifier rubyid_atk_ids'>atk_ids</span><span class='period'>.</span><span class='id identifier rubyid_empty?'>empty?</span>
     <span class='id identifier rubyid_puts'>puts</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='embexpr_beg'>#{</span><span class='id identifier rubyid_header'>header</span><span class='embexpr_end'>}</span><span class='tstring_content'>\n\n  (no attacks recorded in this sequence)\n</span><span class='tstring_end'>&quot;</span></span>
     <span class='kw'>return</span>
   <span class='kw'>end</span>
 
-  <span class='comment'># 6) build rows, inserting a blank line between each top-level attack
-</span>  <span class='id identifier rubyid_rows'>rows</span> <span class='op'>=</span> <span class='lbracket'>[</span><span class='rbracket'>]</span>
+  <span class='id identifier rubyid_rows'>rows</span> <span class='op'>=</span> <span class='lbracket'>[</span><span class='rbracket'>]</span>
   <span class='id identifier rubyid_atk_ids'>atk_ids</span><span class='period'>.</span><span class='id identifier rubyid_each_with_index'>each_with_index</span> <span class='kw'>do</span> <span class='op'>|</span><span class='id identifier rubyid_aid'>aid</span><span class='comma'>,</span> <span class='id identifier rubyid_ai'>ai</span><span class='op'>|</span>
-    <span class='comment'># look up the target creature for this attack
-</span>    <span class='id identifier rubyid_ci_id'>ci_id</span> <span class='op'>=</span> <span class='const'><span class='object_link'><a href="DB.html" title="CombatTracker::DB (module)">DB</a></span></span><span class='period'>.</span><span class='id identifier rubyid_conn'><span class='object_link'><a href="DB.html#conn-instance_method" title="CombatTracker::DB#conn (method)">conn</a></span></span><span class='lbracket'>[</span><span class='symbol'>:attack_events</span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_where'>where</span><span class='lparen'>(</span><span class='label'>id:</span> <span class='id identifier rubyid_aid'>aid</span><span class='rparen'>)</span><span class='period'>.</span><span class='id identifier rubyid_get'>get</span><span class='lparen'>(</span><span class='symbol'>:creature_instance_id</span><span class='rparen'>)</span>
+    <span class='id identifier rubyid_ci_id'>ci_id</span> <span class='op'>=</span> <span class='const'><span class='object_link'><a href="DB.html" title="CombatTracker::DB (module)">DB</a></span></span><span class='period'>.</span><span class='id identifier rubyid_conn'><span class='object_link'><a href="DB.html#conn-instance_method" title="CombatTracker::DB#conn (method)">conn</a></span></span><span class='lbracket'>[</span><span class='symbol'>:attack_events</span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_where'>where</span><span class='lparen'>(</span><span class='label'>id:</span> <span class='id identifier rubyid_aid'>aid</span><span class='rparen'>)</span><span class='period'>.</span><span class='id identifier rubyid_get'>get</span><span class='lparen'>(</span><span class='symbol'>:creature_instance_id</span><span class='rparen'>)</span>
     <span class='id identifier rubyid_ci'>ci</span>    <span class='op'>=</span> <span class='const'><span class='object_link'><a href="DB.html" title="CombatTracker::DB (module)">DB</a></span></span><span class='period'>.</span><span class='id identifier rubyid_conn'><span class='object_link'><a href="DB.html#conn-instance_method" title="CombatTracker::DB#conn (method)">conn</a></span></span><span class='lbracket'>[</span><span class='symbol'>:creature_instances</span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_where'>where</span><span class='lparen'>(</span><span class='label'>id:</span> <span class='id identifier rubyid_ci_id'>ci_id</span><span class='rparen'>)</span><span class='period'>.</span><span class='id identifier rubyid_first'>first</span>
     <span class='id identifier rubyid_target_str'>target_str</span> <span class='op'>=</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='embexpr_beg'>#{</span><span class='id identifier rubyid_ci'>ci</span><span class='lbracket'>[</span><span class='symbol'>:noun</span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_upcase'>upcase</span><span class='embexpr_end'>}</span><span class='tstring_content'> (</span><span class='embexpr_beg'>#{</span><span class='id identifier rubyid_ci'>ci</span><span class='lbracket'>[</span><span class='symbol'>:exist_id</span><span class='rbracket'>]</span><span class='embexpr_end'>}</span><span class='tstring_content'>)</span><span class='tstring_end'>&quot;</span></span>
 
-    <span class='comment'># get the 5-col attack tree
-</span>    <span class='id identifier rubyid_tree'>tree</span> <span class='op'>=</span> <span class='id identifier rubyid_format_attack_tree'>format_attack_tree</span><span class='lparen'>(</span><span class='id identifier rubyid_aid'>aid</span><span class='rparen'>)</span>
+    <span class='id identifier rubyid_tree'>tree</span> <span class='op'>=</span> <span class='id identifier rubyid_format_attack_tree'>format_attack_tree</span><span class='lparen'>(</span><span class='id identifier rubyid_aid'>aid</span><span class='rparen'>)</span>
 
-    <span class='comment'># append the 6th TARGET col (only on the first row of each attack)
-</span>    <span class='id identifier rubyid_tree'>tree</span><span class='period'>.</span><span class='id identifier rubyid_each_with_index'>each_with_index</span> <span class='kw'>do</span> <span class='op'>|</span><span class='id identifier rubyid_row'>row</span><span class='comma'>,</span> <span class='id identifier rubyid_ri'>ri</span><span class='op'>|</span>
+    <span class='id identifier rubyid_tree'>tree</span><span class='period'>.</span><span class='id identifier rubyid_each_with_index'>each_with_index</span> <span class='kw'>do</span> <span class='op'>|</span><span class='id identifier rubyid_row'>row</span><span class='comma'>,</span> <span class='id identifier rubyid_ri'>ri</span><span class='op'>|</span>
       <span class='id identifier rubyid_rows'>rows</span> <span class='op'>&lt;&lt;</span> <span class='lparen'>(</span><span class='id identifier rubyid_ri'>ri</span> <span class='op'>==</span> <span class='int'>0</span> <span class='op'>?</span> <span class='id identifier rubyid_row'>row</span> <span class='op'>+</span> <span class='lbracket'>[</span><span class='id identifier rubyid_target_str'>target_str</span><span class='rbracket'>]</span> <span class='op'>:</span> <span class='id identifier rubyid_row'>row</span> <span class='op'>+</span> <span class='lbracket'>[</span><span class='tstring'><span class='tstring_beg'>&#39;</span><span class='tstring_end'>&#39;</span></span><span class='rbracket'>]</span><span class='rparen'>)</span>
     <span class='kw'>end</span>
 
-    <span class='comment'># blank separator
-</span>    <span class='id identifier rubyid_rows'>rows</span> <span class='op'>&lt;&lt;</span> <span class='lbracket'>[</span><span class='tstring'><span class='tstring_beg'>&#39;</span><span class='tstring_end'>&#39;</span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&#39;</span><span class='tstring_end'>&#39;</span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&#39;</span><span class='tstring_end'>&#39;</span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&#39;</span><span class='tstring_end'>&#39;</span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&#39;</span><span class='tstring_end'>&#39;</span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&#39;</span><span class='tstring_end'>&#39;</span></span><span class='rbracket'>]</span> <span class='kw'>if</span> <span class='id identifier rubyid_ai'>ai</span> <span class='op'>&lt;</span> <span class='id identifier rubyid_atk_ids'>atk_ids</span><span class='period'>.</span><span class='id identifier rubyid_size'>size</span> <span class='op'>-</span> <span class='int'>1</span>
+    <span class='id identifier rubyid_rows'>rows</span> <span class='op'>&lt;&lt;</span> <span class='lbracket'>[</span><span class='tstring'><span class='tstring_beg'>&#39;</span><span class='tstring_end'>&#39;</span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&#39;</span><span class='tstring_end'>&#39;</span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&#39;</span><span class='tstring_end'>&#39;</span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&#39;</span><span class='tstring_end'>&#39;</span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&#39;</span><span class='tstring_end'>&#39;</span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&#39;</span><span class='tstring_end'>&#39;</span></span><span class='rbracket'>]</span> <span class='kw'>if</span> <span class='id identifier rubyid_ai'>ai</span> <span class='op'>&lt;</span> <span class='id identifier rubyid_atk_ids'>atk_ids</span><span class='period'>.</span><span class='id identifier rubyid_size'>size</span> <span class='op'>-</span> <span class='int'>1</span>
   <span class='kw'>end</span>
 
-  <span class='comment'># 7) print with 6 columns
-</span>  <span class='id identifier rubyid_cols'>cols</span> <span class='op'>=</span> <span class='qwords_beg'>%w[</span><span class='tstring_content'>Attack</span><span class='words_sep'> </span><span class='tstring_content'>DMG</span><span class='words_sep'> </span><span class='tstring_content'>STATUS</span><span class='words_sep'> </span><span class='tstring_content'>CRIT_STUFFS</span><span class='words_sep'> </span><span class='tstring_content'>FATAL?</span><span class='words_sep'> </span><span class='tstring_content'>TARGET</span><span class='tstring_end'>]</span></span>
+  <span class='id identifier rubyid_cols'>cols</span> <span class='op'>=</span> <span class='qwords_beg'>%w[</span><span class='tstring_content'>Attack</span><span class='words_sep'> </span><span class='tstring_content'>DMG</span><span class='words_sep'> </span><span class='tstring_content'>STATUS</span><span class='words_sep'> </span><span class='tstring_content'>CRIT_STUFFS</span><span class='words_sep'> </span><span class='tstring_content'>FATAL?</span><span class='words_sep'> </span><span class='tstring_content'>TARGET</span><span class='tstring_end'>]</span></span>
   <span class='id identifier rubyid_print_ascii_table'>print_ascii_table</span><span class='lparen'>(</span><span class='id identifier rubyid_header'>header</span><span class='comma'>,</span> <span class='id identifier rubyid_cols'>cols</span><span class='comma'>,</span> <span class='id identifier rubyid_rows'>rows</span><span class='rparen'>)</span>
 <span class='kw'>end</span></pre>
     </td>
@@ -1325,7 +1592,7 @@
       <div class="method_details ">
   <h3 class="signature " id="session_list-class_method">
   
-    .<strong>session_list</strong>(n = 5)  &#x21d2; <tt>Object</tt> 
+    .<strong>session_list</strong>(n = 5)  &#x21d2; <tt>void</tt> 
   
 
   
@@ -1333,16 +1600,62 @@
   
 </h3><div class="docstring">
   <div class="discussion">
-    
-<p>List the most recent combat sessions.</p>
-
-<p>n – Integer (optional) number of sessions to show, default 5</p>
+    <p class="note returns_void">This method returns an undefined value.</p>
+<p>Retrieves a list of the last n combat sessions, displaying them in a formatted table.</p>
 
 
   </div>
 </div>
 <div class="tags">
   
+  <div class="examples">
+    <h4 class="tag_title">Examples:</h4>
+    
+      
+      <pre class="example code"><code><span class='const'><span class='object_link'><a href="../CombatTracker.html" title="CombatTracker (module)">CombatTracker</a></span></span><span class='op'>::</span><span class='const'><span class='object_link'><a href="" title="CombatTracker::Reporter (class)">Reporter</a></span></span><span class='period'>.</span><span class='id identifier rubyid_session_list'>session_list</span><span class='lparen'>(</span><span class='int'>3</span><span class='rparen'>)</span></code></pre>
+    
+  </div>
+<p class="tag_title">Parameters:</p>
+<ul class="param">
+  
+    <li>
+      
+        <span class='name'>n</span>
+      
+      
+        <span class='type'>(<tt>Integer</tt>)</span>
+      
+      
+        <em class="default">(defaults to: <tt>5</tt>)</em>
+      
+      
+        &mdash;
+        <div class='inline'>
+<p>the number of sessions to retrieve (default is 5)</p>
+</div>
+      
+    </li>
+  
+</ul>
+
+<p class="tag_title">Raises:</p>
+<ul class="raise">
+  
+    <li>
+      
+      
+        <span class='type'>(<tt>StandardError</tt>)</span>
+      
+      
+      
+        &mdash;
+        <div class='inline'>
+<p>if there are no combat sessions recorded</p>
+</div>
+      
+    </li>
+  
+</ul>
 
 </div><table class="source_code">
   <tr>
@@ -1350,11 +1663,6 @@
       <pre class="lines">
 
 
-8
-9
-10
-11
-12
 13
 14
 15
@@ -1380,10 +1688,15 @@
 35
 36
 37
-38</pre>
+38
+39
+40
+41
+42
+43</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'reporter.rb', line 8</span>
+      <pre class="code"><span class="info file"># File 'reporter.rb', line 13</span>
 
 <span class='kw'>def</span> <span class='kw'>self</span><span class='period'>.</span><span class='id identifier rubyid_session_list'>session_list</span><span class='lparen'>(</span><span class='id identifier rubyid_n'>n</span> <span class='op'>=</span> <span class='int'>5</span><span class='rparen'>)</span>
   <span class='id identifier rubyid_limit'>limit</span> <span class='op'>=</span> <span class='lbracket'>[</span><span class='id identifier rubyid_n'>n</span><span class='period'>.</span><span class='id identifier rubyid_to_i'>to_i</span><span class='comma'>,</span> <span class='int'>1</span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_max'>max</span>
@@ -1424,7 +1737,7 @@
       <div class="method_details ">
   <h3 class="signature " id="session_report-class_method">
   
-    .<strong>session_report</strong>(session_id = nil)  &#x21d2; <tt>Object</tt> 
+    .<strong>session_report</strong>(session_id = nil)  &#x21d2; <tt>void</tt> 
   
 
   
@@ -1432,16 +1745,62 @@
   
 </h3><div class="docstring">
   <div class="discussion">
-    
-<p>Reports all creatures encountered in a session.</p>
-
-<p>session_id – Integer (optional). Defaults to the last session if nil.</p>
+    <p class="note returns_void">This method returns an undefined value.</p>
+<p>Generates a detailed report for a specific combat session.</p>
 
 
   </div>
 </div>
 <div class="tags">
   
+  <div class="examples">
+    <h4 class="tag_title">Examples:</h4>
+    
+      
+      <pre class="example code"><code><span class='const'><span class='object_link'><a href="../CombatTracker.html" title="CombatTracker (module)">CombatTracker</a></span></span><span class='op'>::</span><span class='const'><span class='object_link'><a href="" title="CombatTracker::Reporter (class)">Reporter</a></span></span><span class='period'>.</span><span class='id identifier rubyid_session_report'>session_report</span><span class='lparen'>(</span><span class='int'>123</span><span class='rparen'>)</span></code></pre>
+    
+  </div>
+<p class="tag_title">Parameters:</p>
+<ul class="param">
+  
+    <li>
+      
+        <span class='name'>session_id</span>
+      
+      
+        <span class='type'>(<tt>Integer</tt>, <tt>nil</tt>)</span>
+      
+      
+        <em class="default">(defaults to: <tt>nil</tt>)</em>
+      
+      
+        &mdash;
+        <div class='inline'>
+<p>the ID of the session to report on (default is nil, which fetches the most recent session)</p>
+</div>
+      
+    </li>
+  
+</ul>
+
+<p class="tag_title">Raises:</p>
+<ul class="raise">
+  
+    <li>
+      
+      
+        <span class='type'>(<tt>StandardError</tt>)</span>
+      
+      
+      
+        &mdash;
+        <div class='inline'>
+<p>if the specified session does not exist</p>
+</div>
+      
+    </li>
+  
+</ul>
 
 </div><table class="source_code">
   <tr>
@@ -1449,15 +1808,6 @@
       <pre class="lines">
 
 
-43
-44
-45
-46
-47
-48
-49
-50
-51
 52
 53
 54
@@ -1499,10 +1849,19 @@
 90
 91
 92
-93</pre>
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'reporter.rb', line 43</span>
+      <pre class="code"><span class="info file"># File 'reporter.rb', line 52</span>
 
 <span class='kw'>def</span> <span class='kw'>self</span><span class='period'>.</span><span class='id identifier rubyid_session_report'>session_report</span><span class='lparen'>(</span><span class='id identifier rubyid_session_id'>session_id</span> <span class='op'>=</span> <span class='kw'>nil</span><span class='rparen'>)</span>
   <span class='comment'># 1) Determine the session
@@ -1565,7 +1924,7 @@
 </div>
 
       <div id="footer">
-  Generated on Thu May 22 10:20:39 2025 by
+  Generated on Thu May 22 10:43:55 2025 by
   <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
   0.9.37 (ruby-3.3.4).
 </div>
