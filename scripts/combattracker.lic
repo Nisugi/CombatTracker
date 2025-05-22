@@ -49,7 +49,7 @@ module CombatTracker
       attr_accessor :session_timeout, :flush_interval, :max_cache_rows, :db_path
     end
 
-    self.session_timeout = 180      # seconds of inactivity before a new session
+    self.session_timeout = 60      # seconds of inactivity before a new session
     self.flush_interval  = 300      # seconds between background DB flushes
     self.max_cache_rows  = 10_000   # early flush threshold
     self.db_path         = File.join(DATA_DIR, XMLData.game, Char.name, 'combat.db')
@@ -139,10 +139,10 @@ module CombatTracker
     def self.seed!
       conn = DB.conn
 
-      Parser::ASSAULT_DEFS.each_with_index do |ass_def|
-        conn[:assault_types]
+      Parser::SEQUENCE_DEFS.each_with_index do |seq_def|
+        conn[:sequence_types]
           .insert_conflict(target: :name, do_nothing: true)
-          .insert(name: ass_def.name.to_s.upcase)
+          .insert(name: seq_def.name.to_s.upcase)
       end
 
       Parser::ATTACK_DEFS.each_with_index do |atk_def|
@@ -344,10 +344,12 @@ module CombatTracker
 
   module Processor
     class << self
-      attr_accessor :pending_assault, :current_assault
+      # Holds the SequenceDef + timestamps while it’s running
+      attr_accessor :pending_sequence,  # {def: SequenceDef, started_at:, ended_at:}
+                    :current_sequence  # {id: Integer, step: Integer, ci_id: Integer}
     end
-    self.pending_assault = nil
-    self.current_assault = nil
+    self.pending_sequence  = nil
+    self.current_sequence  = nil
 
     module_function
 
@@ -375,15 +377,22 @@ module CombatTracker
       current = nil
 
       lines.each do |ln|
-        if (atype = Parser.parse_assault_start(ln))
-          self.pending_assault = { type: atype, started_at: Time.now }
-        elsif Parser.parse_assault_end(ln)
-          self.pending_assault[:ending] = Time.now if pending_assault
+        if (sd = Parser.parse_sequence_start(ln))
+          target = Parser.extract_link(ln) || {}
+          self.pending_sequence = { def: sd, started_at: Time.now, ended_at: nil, target: target }
+        elsif pending_sequence && Parser.parse_sequence_end(ln)
+          pending_sequence[:ended_at] = Time.now
         end
 
         if (a = Parser.parse_attack(ln))
           events << current if current
           current = init_event(a)
+          if pending_sequence && a[:name] == pending_sequence[:def] && a[:target][:id].nil? && pending_sequence[:target][:id]
+            current[:target] = pending_sequence[:target]
+            current[:sequence_event] = pending_sequence
+            self.pending_sequence[:step] ||= 0
+            current[:sequence_step] = (self.pending_sequence[:step] += 1)
+          end
 
         elsif current && ln =~ /\.\.\. and hit for (?<d>\d+) points? of damage!/i
           current[:damages] << Regexp.last_match[:d].to_i
@@ -442,19 +451,21 @@ module CombatTracker
         statuses: [],
         flares: [],
         ctx: :attack,
-        assaulting: nil
+        sequence_event_id: nil,
+        sequence_step: 0
       }
     end
 
-    def init_assault(ci_id)
-      assault_id = CombatTracker::DebugInsert.insert(:assault_events, {
+    def init_sequence_event(ci_id)
+      sd   = pending_sequence[:def]
+      seq_id = DebugInsert.insert(:sequence_events, {
         session_id:           Session.current_id,
         creature_instance_id: ci_id, 
-        assault_type_id:      Lookup.id(:attack_types, pending_assault[:type]),
-        started_at:           pending_assault[:started_at],
-        ended_at:             pending_assault[:ending],
+        sequence_type_id:     Lookup.id(:sequence_types, sd.name),
+        started_at:           pending_sequence[:started_at],
+        ended_at:             pending_sequence[:ended_at]
       })
-      self.current_assault = { id: assault_id, sequence: 0, ci_id: ci_id }
+      self.current_sequence = { id: seq_id, step: 0, ci_id: ci_id }
     end
 
     # Persists an event to the database.
@@ -470,16 +481,10 @@ module CombatTracker
       tgt        = ev[:target]
       ci_id      = upsert_creature(session_id, tgt) if tgt[:id]
       now        = Time.now
+      outcome_id = (Lookup.id(:outcome_types, ev[:outcome]) rescue 1)
 
-      if pending_assault && current_assault.nil?
-        init_assault(ci_id)
-      end
-      
-      begin
-        outcome_id = Lookup.id(:outcome_types, ev[:outcome])
-      rescue
-        Log.log(:VERBOSE, "OUTCOME", "Unknown outcome: #{ev[:outcome]}, defaulting to HIT")
-        outcome_id = 1
+      if ev[:sequence_event] && current_sequence.nil? && ci_id
+        init_sequence_event(ci_id)
       end
 
       attrs = {
@@ -488,22 +493,23 @@ module CombatTracker
         creature_instance_id: ci_id,
         attack_type_id:       Lookup.id(:attack_types, ev[:name]),
         outcome_id:           outcome_id,
-        occurred_at:          now,
+        occurred_at:          now
       }
 
-      if current_assault
-        attrs[:assault_id]    = current_assault[:id]
-        attrs[:assault_sequence] = (current_assault[:sequence] += 1)
-        attrs[:creature_instance_id] = current_assault[:ci_id] if ci_id.nil?
+      if ev[:sequence_event]
+        attrs[:sequence_event_id] = current_sequence[:id]
+        attrs[:sequence_step]      = ev[:sequence_step]
       end
-      attack_id = CombatTracker::DebugInsert.insert(:attack_events, attrs)
 
-      if pending_assault && pending_assault[:ending]
-        DB.conn[:assault_events]
-          .where(id: current_assault[:id])
-          .update(ended_at: pending_assault[:ending])
-        self.current_assault = nil
-        self.pending_assault = nil
+      attack_id = DebugInsert.insert(:attack_events, attrs)
+
+      if ev[:sequence_event] && ev[:sequence_event][:ended_at]
+        DB.conn[:sequence_events]
+          .where(id: current_sequence[:id])
+          .update(ended_at: ev[:sequence_event][:ended_at])
+
+        self.current_sequence = nil
+        self.pending_sequence = nil
       end
 
       ev[:damages].each_with_index do |damage, i|      
@@ -623,7 +629,11 @@ module CombatTracker
     #   persist_flares([{ name: "Fire", damage: 5, crit: { type: "lightning", location: "nerves", rank: 6 } }], 1, 1, "session_123")
     def persist_flares(flares, atk_id, seq, session_id)
       flares.each_with_index do |fl, i|
-        child_attack = fl[:name] == :blink ? atk_id + 1 : nil
+        if fl[:name].to_s =~ /blink|sigil_cast/
+          child_attack = atk_id + 1
+        else
+          child_attack = nil
+        end
         flare_event_id = CombatTracker::DebugInsert.insert(:flare_events, {
             session_id:      session_id,
             attack_id:       atk_id,

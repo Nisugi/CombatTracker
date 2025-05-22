@@ -32,7 +32,7 @@ module CombatTracker
 
     # ---- definitions ---------------------------------------------------
     # Struct definitions for various combat-related entities.
-    AssaultDef    = Struct.new(:name, :start_patterns, :end_patterns)
+    SequenceDef   = Struct.new(:name, :start_patterns, :end_patterns)
     AttackDef     = Struct.new(:name, :patterns, :damaging, :spell, :aoe)
     FlareDef      = Struct.new(:name, :patterns, :damaging, :aoe)
     LodgedDef     = Struct.new(:type, :patterns)
@@ -87,16 +87,16 @@ module CombatTracker
       ].freeze, true, false, true),
     ].freeze
 
-    ASSAULT_DEFS = [
-      #AssaultDef.new(:barrage, [/Drawing several .+? from your .+?, you grip them loosely between your fingers in preparation for a rapid barrage\./].freeze, [
+    SEQUENCE_DEFS = [
+      #SequenceDef.new(:barrage, [/Drawing several .+? from your .+?, you grip them loosely between your fingers in preparation for a rapid barrage\./].freeze, [
       #  /Upon firing your last .+?, you release a measured breath and lower your .+?\./,
       #  /Distracted, you hesitate, and your assault is broken.  You give your blades a quick, sweeping flick of annoyance as you lower them\./].freeze),
-      AssaultDef.new(:earthen_fury, [
+      SequenceDef.new(:earthen_fury, [
         /The ground beneath (?<target>.+?) begins to boil violently!/,
         /The ground beneath (?<target>.+?) suddenly frosts and rumbles violently!/,
         /The ground beneath (?<target>.+?) boils with renewed vigor!/,
         /The ground beneath (?<target>.+?) rumbles with renewed vigor!/].freeze, [/The ground beneath (?<target>.+?) suddenly calms\./].freeze),
-      AssaultDef.new(:flurry, [/You rotate your wrist, your .+? executing a casual spin to establish your flow as you advance upon (?<target>.+?)!/,
+      SequenceDef.new(:flurry, [/You rotate your wrist, your .+? executing a casual spin to establish your flow as you advance upon (?<target>.+?)!/,
         /You rotate your wrists, your .+? and .+? executing a casual spin to establish your flow as you advance upon (?<target>[^!]+)!/].freeze, [
         /The mesmerizing sway of body and blade glides to its inevitable end with one final twirl of your .+?\./,
         /Distracted, you hesitate, and your assault is broken.  You give your blades a quick, sweeping flick of annoyance as you lower them\./].freeze)
@@ -111,7 +111,7 @@ module CombatTracker
       FlareDef.new(:air, [/\*\* Your .+? unleashes a blast of air! \*\*/].freeze, true),
       FlareDef.new(:air_flourish, [/\*\* A fierce whirlwind erupts around .+?, encircling (?<target>.+?) in a suffocating cyclone! \*\*/].freeze, true),
       FlareDef.new(:arcane_reflex, [/Vital energy infuses you, hastening your arcane reflexes!/].freeze, false),
-      FlareDef.new(:blink, [/Your .+? suddenly lights up with hundreds of tiny blue sparks!/].freeze, true),
+      FlareDef.new(:blink, [/Your .+? suddenly lights up with hundreds of tiny blue sparks!/].freeze, true, false),
       FlareDef.new(:blessings_flourish, [
         /\*\* A crackling wave arcs across your body, striking (?<target>.+?) with lightning speed!  A spiritual resonance warms your core, lending you renewed strength! \*\*/,
         /\*\* Shimmering arcs of lightning stream from your hands, colliding with (?<target>.+?) in a rapid burst!  A stirring force ignites within you, augmenting your spirit! \*\*/,
@@ -147,6 +147,7 @@ module CombatTracker
       FlareDef.new(:ghezyte, [/\*\* Cords of plasma-veined grey mist seep from your .+? and entangle (?<target>[^,]+), causing .+? to tremble violently! \*\*/].freeze, false),
       FlareDef.new(:grapple, [/\*\* Your .+? releases a twisted tendril of force! \*\*/].freeze, true),
       FlareDef.new(:guiding_light, [/\*\* Your .+? sprays with a burst of plasma energy! \*\*/].freeze, true),
+      FlareDef.new(:holy_water, /\*\* Your .+? sprays forth a shower of pure water! \*\*/.freeze, true, false),
       FlareDef.new(:impact, [/\*\* Your .+? release a blast of vibrating energy at the (?<target>[^!]+)! \*\*/].freeze, true),
       FlareDef.new(:lightning, [/\*\* Your .+? emits a searing bolt of lightning! \*\*/].freeze, true),
       FlareDef.new(:lightning_gef, [/\*\* A vicious torrent of crackling lightning surges from .+? and strikes (?<target>[^!]+)! \*\*/].freeze, true),
@@ -165,6 +166,8 @@ module CombatTracker
       FlareDef.new(:psychic_assault, [/\*\* Your .+? unleashes a blast of psychic energy at the (?<target>[^!]+)! \*\*/].freeze, true),
       FlareDef.new(:religion_flourish, [/\*\* Divine flames kindle around .+?, leaping forth to engulf (?<target>.+?) in a sacred inferno! \*\*/].freeze, true),
       FlareDef.new(:rusalkan, [/Succumbing to the force of the tidal wave, (?<target>.+?) is thrown to the ground\./].freeze, false),
+      FlareDef.new(:sigil_dispel, [/\*\* Tendrils of .+? lash out from your .+? toward (?<target>.+?) and cage .+? within bands of concentric geometry that constrict as one, shattering upon impact! \*\*/].freeze, true, false),
+      FlareDef.new(:sigil_cast, [/\*\* Numerous sigils along your .+? abruptly flare to brilliance!  .+? surges from each, twining into an echo of your last spell\.\.\. \*\*/].freeze, true, false),
       FlareDef.new(:slashing_strikes, [/\*\* Your .+? finds its mark, slicing deep into (?<target>.+?)<popBold\/> (?<location>.+?)! \*\*/].freeze, true),
       FlareDef.new(:somnis, [/\*\* For a split second, the striations of your .+? expand into a sinuous pearlescent mist that rushes towards the (?<target>[^,]+), enveloping .+? entirely and causing .+? to collapse, fast asleep! \*\*/].freeze, false),
       FlareDef.new(:sprite, [/\*\* The .+? sprite on your shoulder sends forth a cylindrical, .+? blast of magic at (?<target>.+?\<\/a\>) .+?! \*\*/].freeze, true),
@@ -203,6 +206,7 @@ module CombatTracker
         /Unable to focus clearly, (?<target>.+?) blindly evades the .+?!/,
         /(?<target>.+?) barely dodges the .+?!/,
         /(?<target>.+?) dodges just in the nick of time!/,
+        /(?<target>.+?) dodges out of the way!/,
         /(?<target>.+?) evades the .+? by a hair!/,
         /(?<target>.+?) evades the .+? by inches!/,
         /(?<target>.+?) evades the .+? with ease!/,
@@ -264,8 +268,8 @@ module CombatTracker
         /CS: (?<CS>[\+\-\d]+) \- TD: (?<TD>[\+\-\d]+) \+ CvA: (?<CvA>[\+\-\d]+) \+ d\d+\: (?<roll>[\+\-\d]+) \+ Bonus: (?<bonus>[\+\-\d]+) \=\= (?<result>[\+\-\d]+)/
       ]).freeze,
       ResolutionDef.new(:smr, [
-        /\[SMR Result: (?<result>\d+) \(Open d100: (?<roll>[\+\-\d]+), Bonus: (?<bonus>[\-\+\d]+)\)\]/,
-        /\[SMR Result: (?<result>\d+) \(Open d100: (?<roll>[\+\-\d]+)\)\]/
+        /\[SMR result: (?<result>\d+) \(Open d100: (?<roll>[\+\-\d]+), Bonus: (?<bonus>[\-\+\d]+)\)\]/,
+        /\[SMR result: (?<result>\d+) \(Open d100: (?<roll>[\+\-\d]+)\)\]/
       ]).freeze
     ].freeze
 
@@ -282,22 +286,22 @@ module CombatTracker
     ].freeze
 
     # Lookup tables for different combat patterns.
-    ASS_START_LOOKUP  = ASSAULT_DEFS.flat_map    { |d| d.start_patterns.map { |rx| [rx, d.name, ]}}
-    ASS_END_LOOKUP    = ASSAULT_DEFS.flat_map    { |d| d.end_patterns.map { |rx| [rx, d.name]}}
-    ATTACK_LOOKUP     = ATTACK_DEFS.flat_map     { |d| d.patterns.map { |rx| [rx, d.name, d.damaging, d.spell, d.aoe]} }.freeze
-    FLARE_LOOKUP      = FLARE_DEFS.flat_map      { |d| d.patterns.map { |rx| [rx, d.name, d.damaging, d.aoe] } }.freeze
-    RESOLUTION_LOOKUP = RESOLUTION_DEFS.flat_map { |d| d.patterns.map { |rx| [rx, d.type] } }.freeze
-    OUTCOME_LOOKUP    = OUTCOME_DEFS.flat_map    { |d| d.patterns.map { |rx| [rx, d.type] } }.freeze
-    STATUS_LOOKUP     = STATUS_DEFS.flat_map     { |d| d.patterns.map { |rx| [rx, d.type] } }.freeze
+    SEQUENCE_START_LOOKUP = SEQUENCE_DEFS.flat_map    { |d| d.start_patterns.map { |rx| [rx, d.name, ]}}
+    SEQUENCE_END_LOOKUP   = SEQUENCE_DEFS.flat_map    { |d| d.end_patterns.map { |rx| [rx, d.name]}}
+    ATTACK_LOOKUP         = ATTACK_DEFS.flat_map     { |d| d.patterns.map { |rx| [rx, d.name, d.damaging, d.spell, d.aoe]} }.freeze
+    FLARE_LOOKUP          = FLARE_DEFS.flat_map      { |d| d.patterns.map { |rx| [rx, d.name, d.damaging, d.aoe] } }.freeze
+    RESOLUTION_LOOKUP     = RESOLUTION_DEFS.flat_map { |d| d.patterns.map { |rx| [rx, d.type] } }.freeze
+    OUTCOME_LOOKUP        = OUTCOME_DEFS.flat_map    { |d| d.patterns.map { |rx| [rx, d.type] } }.freeze
+    STATUS_LOOKUP         = STATUS_DEFS.flat_map     { |d| d.patterns.map { |rx| [rx, d.type] } }.freeze
 
     # Regular expressions to detect various combat actions.
-    ASS_START_DETECTOR  = Regexp.union(ASS_START_LOOKUP.map(&:first)).freeze
-    ASS_END_DETECTOR    = Regexp.union(ASS_END_LOOKUP.map(&:first)).freeze
-    ATTACK_DETECTOR     = Regexp.union(ATTACK_LOOKUP.map(&:first)).freeze
-    FLARE_DETECTOR      = Regexp.union(FLARE_LOOKUP.map(&:first)).freeze
-    OUTCOME_DETECTOR    = Regexp.union(OUTCOME_LOOKUP.map(&:first)).freeze
-    RESOLUTION_DETECTOR = Regexp.union(RESOLUTION_LOOKUP.map(&:first)).freeze
-    STATUS_DETECTOR     = Regexp.union(STATUS_LOOKUP.map(&:first)).freeze
+    SEQUENCE_START_DETECTOR = Regexp.union(SEQUENCE_START_LOOKUP.map(&:first)).freeze
+    SEQUENCE_END_DETECTOR   = Regexp.union(SEQUENCE_END_LOOKUP.map(&:first)).freeze
+    ATTACK_DETECTOR         = Regexp.union(ATTACK_LOOKUP.map(&:first)).freeze
+    FLARE_DETECTOR          = Regexp.union(FLARE_LOOKUP.map(&:first)).freeze
+    OUTCOME_DETECTOR        = Regexp.union(OUTCOME_LOOKUP.map(&:first)).freeze
+    RESOLUTION_DETECTOR     = Regexp.union(RESOLUTION_LOOKUP.map(&:first)).freeze
+    STATUS_DETECTOR         = Regexp.union(STATUS_LOOKUP.map(&:first)).freeze
 
     # Regular expression definitions for lodged attacks.
     LODGED_DEFS = Regexp.union(
@@ -319,14 +323,14 @@ module CombatTracker
     # @example
     #   parse_assault("You rotate your wrists, your gleaming steel baselard and gleaming steel baselard executing a casual spin to establish your flow as you advance upon a niveous giant warg!")
     #   # => "flurry"
-    def parse_assault_start(line)
-      return unless ASS_START_DETECTOR.match?(line)
-      ASS_START_LOOKUP.each { |rx, type| return type if rx.match?(line) }
+    def parse_sequence_start(line)
+      return unless SEQUENCE_START_DETECTOR.match?(line)
+      SEQUENCE_START_LOOKUP.each { |rx, type| return type if rx.match?(line) }
     end
 
-    def parse_assault_end(line)
-      return unless ASS_END_DETECTOR.match?(line)
-      ASS_END_LOOKUP.each { |rx, type| return type if rx.match?(line) }
+    def parse_sequence_end(line)
+      return unless SEQUENCE_END_DETECTOR.match?(line)
+      SEQUENCE_END_LOOKUP.each { |rx, type| return type if rx.match?(line) }
     end
 
     # Parses an attack line and extracts relevant information.

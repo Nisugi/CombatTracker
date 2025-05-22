@@ -17,7 +17,7 @@ CREATE TABLE creature_types (
     notes  TEXT
 );
 
-CREATE TABLE assault_types(
+CREATE TABLE sequence_types(
     id   INTEGER PRIMARY KEY,
     name TEXT     UNIQUE NOT NULL
 );
@@ -156,8 +156,8 @@ CREATE TABLE attack_events (
   attack_type_id        INTEGER REFERENCES attack_types(id),
   occurred_at           DATETIME NOT NULL,
   outcome_id            INTEGER REFERENCES outcome_types(id),
-  assault_id            INTEGER REFERENCES assault_events(id) DEFERRABLE INITIALLY DEFERRED DEFAULT NULL,
-  assault_sequence      INTEGER DEFAULT NULL,
+  sequence_event_id    INTEGER REFERENCES sequence_events(id) DEFERRABLE INITIALLY DEFERRED DEFAULT NULL,
+  sequence_step         INTEGER DEFAULT NULL,
   FOREIGN KEY (creature_instance_id) REFERENCES creature_instances(id) DEFERRABLE INITIALLY DEFERRED
 );
 -- timeline index: all activity in a hunt
@@ -275,11 +275,11 @@ CREATE INDEX idx_status_events_creature_status ON status_events(creature_id, sta
 CREATE INDEX idx_status_events_session_id ON status_events(session_id);
 
 -- 2-k  Assault events
-CREATE TABLE assault_events(
+CREATE TABLE sequence_events(
   id                    INTEGER PRIMARY KEY AUTOINCREMENT,
   session_id            INTEGER NOT NULL REFERENCES combat_sessions(id),
   creature_instance_id  INTEGER NOT NULL REFERENCES creature_instances(id),
-  assault_type_id       INTEGER NOT NULL REFERENCES attack_types(id),
+  sequence_type_id       INTEGER NOT NULL REFERENCES attack_types(id),
   started_at            DATETIME NOT NULL,
   ended_at              DATETIME,
   FOREIGN KEY (creature_instance_id) REFERENCES creature_instances(id) DEFERRABLE INITIALLY DEFERRED

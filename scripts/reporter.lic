@@ -2,100 +2,306 @@ module CombatTracker
   class Reporter
     @type_sequences = {}
 
-    # creature_noun  - String (optional)
-    # creature_index - Integer (optional, 1-based or negative)
-    def self.creature_report(creature_noun = nil, creature_index = nil)
-      # 1) gather all nouns
-      nouns = DB.conn[:creature_instances]
-               .select_map(:noun)
-               .uniq
+    # List the most recent combat sessions.
+    #
+    # n – Integer (optional) number of sessions to show, default 5
+    def self.session_list(n = 5)
+      limit = [n.to_i, 1].max
 
-      # If no noun given or invalid, list choices
-      if creature_noun.nil? ||
-         !nouns.map(&:upcase).include?(creature_noun.to_s.upcase)
+      # Pull the last n sessions, newest first
+      sessions = DB.conn[:combat_sessions]
+                   .order(Sequel.desc(:id))
+                   .limit(limit)
+                   .all
 
-        msg = "> Available Creature Nouns:\n"
-        nouns.sort.each { |n| msg += "      #{n}\n" }
-        msg += "\nUsage: CombatTracker::Reporter.creature_report(\"gigas shield-maiden\", [index])\n\n"
-        respond Lich::Messaging.mono(msg)
+      if sessions.empty?
+        respond "No combat sessions recorded."
         return
       end
 
-      # 2) normalize to DB casing
-      chosen_noun = nouns.find { |n| n.upcase == creature_noun.to_s.upcase }
+      # Build display rows
+      rows = sessions.map do |s|
+        [
+          Lich::Messaging.make_cmd_link(s[:id].to_s, ";eq CombatTracker::Reporter.session_report(#{s[:id]})"),
+          s[:character_name],
+          s[:started_at].strftime("%Y-%m-%d %H:%M:%S"),
+          s[:last_event_at].strftime("%Y-%m-%d %H:%M:%S"),
+          s[:ended_at] ? s[:ended_at].strftime("%Y-%m-%d %H:%M:%S") : ''
+        ]
+      end
 
-      # 3) build sequence of instance IDs for this noun
-      seq = DB.conn[:creature_instances]
-              .where(noun: chosen_noun)
-              .order(:id)
-              .select_map(:id)
+      # Header + column names
+      header = "Last #{limit} Combat Sessions"
+      cols   = %w[ID Character Started\ At Last\ Event Ended\ At]
 
-      if seq.empty?
-        puts "No recorded instances of “#{chosen_noun}”."
+      print_ascii_table(header, cols, rows)
+    end
+
+    # Reports all creatures encountered in a session.
+    #
+    # session_id – Integer (optional). Defaults to the last session if nil.
+    def self.session_report(session_id = nil)
+      # 1) Determine the session
+      sid = if session_id
+              session_id.to_i
+            else
+              DB.conn[:combat_sessions]
+                .order(Sequel.desc(:id))
+                .get(:id)
+            end
+
+      # 2) Validate session exists
+      unless DB.conn[:combat_sessions].where(id: sid).any?
+        respond "No session ##{sid} found. Showing recent sessions instead:\n\n"
+        list_sessions(5)
         return
       end
 
-      # 4) pick the right index
-      idx = if creature_index
-        i = creature_index.to_i
-        i > 0 ? (i - 1) : (seq.size + i)
+      session = DB.conn[:combat_sessions].where(id: sid).first
+
+      # 3) Fetch all creature instances for that session
+      creatures = DB.conn[:creature_instances]
+                    .where(session_id: sid)
+                    .order(:first_seen_at)
+                    .all
+
+      if creatures.empty?
+        respond "No creatures recorded in session ##{sid}."
+        return
+      end
+
+      # 4) Build header
+      header = "Report for Session ##{sid} - #{session[:character_name]}"
+      columns = %w[# ID Noun Name First\ Seen Last\ Seen Killed\ At]
+
+      # 5) Build rows: [indent, ordinal, id, noun, display_name, first_seen, last_seen, killed_at]
+      rows = creatures.map.with_index(1) do |ci, idx|
+        [
+          sid.to_s,
+          idx.to_s,
+          Lich::Messaging.make_cmd_link("##{ci[:exist_id].to_s}", ";eq CombatTracker::Reporter.creature_report(#{ci[:exist_id].to_s})"),
+          ci[:noun],
+          ci[:display_name],
+          ci[:first_seen_at].strftime("%Y-%m-%d %H:%M:%S"),
+          ci[:last_seen_at]&.strftime("%Y-%m-%d %H:%M:%S") || '',
+          ci[:killed_at]&.strftime("%Y-%m-%d %H:%M:%S") || ''
+        ]
+      end
+
+      # 6) Print the table
+      print_ascii_table(header, columns, rows)
+    end
+
+    # creature_arg – nil | Integer(exist_id) | String(noun)
+    # idx          – nil | Integer(1-based or negative)
+    def self.creature_report(creature_arg = nil, idx = nil)
+      # 1) No args → usage
+      unless creature_arg
+        respond <<~USAGE
+
+          Usage:
+            creature_report(exist_id)
+            creature_report("noun", [index])
+
+          Examples:
+            creature_report(12345678)
+            creature_report("skald", 2)
+            creature_report("berserker", -1)
+
+        USAGE
+
+        list_nouns
+        return
+      end
+
+      # 2) exist_id mode (only one arg, integer-ish)
+      if idx.nil? && creature_arg.to_s =~ /\A\d+\z/
+        exist_id = creature_arg.to_i
+        ci = DB.conn[:creature_instances]
+               .where(exist_id: exist_id)
+               .order(Sequel.desc(:first_seen_at))
+               .first
+
+        unless ci
+          respond "No creature with exist_id #{exist_id} found."
+          return
+        end
+
+        # we’ve got our creature_instance row
+        noun  = ci[:noun]
+        ci_id = ci[:id]
+        disp  = ci[:display_name]
+        header = "Report for #{disp} ##{exist_id}  -  #{noun.upcase} (#{ci_id})"
+
       else
-        seq.size - 1
+        # 3) noun + optional index mode
+        noun = creature_arg.to_s
+        # build noun list & validate
+        all = DB.conn[:creature_instances].select_map(:noun).uniq
+        unless all.map(&:upcase).include?(noun.upcase)
+          respond "Unknown noun “#{noun}”. Available nouns:"
+          list_nouns
+          return
+        end
+        noun = all.find { |n| n.upcase == noun.upcase }
+
+        # build the sequence of instance IDs for this noun
+        seq = DB.conn[:creature_instances]
+                .where(noun: noun)
+                .order(:first_seen_at)
+                .select_map(:id)
+        if seq.empty?
+          respond "No instances of “#{noun}” found."
+          return
+        end
+
+        # compute zero-based idx
+        index = idx ? idx.to_i : -1
+        zero = index > 0 ? index - 1 : seq.size + index
+        unless zero.between?(0, seq.size - 1)
+          respond "Invalid index #{index} for #{noun} (#{seq.size} instances):"
+          list_instance_ordinals(noun, seq); return
+        end
+
+        ci_id = seq[zero]
+        ci    = DB.conn[:creature_instances].where(id: ci_id).first
+        header = "Report for #{noun.upcase} (#{zero+1}/#{seq.size}) ID:#{ci_id} “#{ci[:display_name]}”"
       end
 
-      unless idx.between?(0, seq.size - 1)
-        puts "Invalid index #{creature_index} for #{chosen_noun} (have #{seq.size} instances):"
-        list_instance_ordinals(chosen_noun, seq)
-        return
-      end
-
-      cid = seq[idx]
-      ci  = DB.conn[:creature_instances].where(id: cid).first
-
-      # 5) header
-      header = "Report for #{ci[:display_name]} ##{ci[:exist_id]}  -  #{chosen_noun.upcase} (#{idx+1})"
-
-      # 6) collect rows: only "root" attacks (exclude those that are children of flares)
-      #    so we don’t duplicate any child_attack under both flare and top-level
+      # 4) Gather every top-level attack on that creature_instance
       child_ids = DB.conn[:flare_events]
                     .where(Sequel.~(child_attack_id: nil))
                     .select_map(:child_attack_id)
 
-      all_rows = []
-      DB.conn[:attack_events]
-        .where(creature_instance_id: cid)
-        .exclude(id: child_ids)            # ← drop all child attacks here
+      attack_ids = DB.conn[:attack_events]
+               .where(creature_instance_id: ci_id)
+               .exclude(id: child_ids)
         .order(:sequence)
         .select_map(:id)
-        .each do |aid|
-          all_rows.concat format_attack_tree(aid)
+
+      rows = []
+      attack_ids.each_with_index do |aid, idx|
+        rows.concat format_attack_tree(aid)
+        rows << ['','','','',''] if idx < attack_ids.size - 1
         end
 
-      if all_rows.empty?
-        puts "No attacks recorded against #{chosen_noun} ##{idx+1}."
-        return
-      end
-
-      # 7) render as one big table
-      print_ascii_table(
-        header,
+      if rows.empty?
+        respond "#{header}\n\n  (no attacks recorded)\n"
+      else
+        print_ascii_table(header,
         %w[Attack DMG STATUS CRIT_STUFFS FATAL?],
-        all_rows
-      )
+                          rows)
+      end
     end
-
-    private
 
     # Helper to list all instance ordinals for a given noun
     def self.list_instance_ordinals(noun, seq)
-      puts "\n> #{noun} Instances:"
+      msg = "\n> #{noun} Instances:"
       seq.each_with_index do |id, i|
         disp = DB.conn[:creature_instances]
                  .where(id: id)
                  .get(:display_name)
-        puts "   #{i+1} => ID #{id} “#{disp}”"
+        msg += "   #{i+1} => ID #{id} #{disp}"
       end
-      puts
+      respond Lich::Messaging.mono(msg)
+    end
+
+    # sequence_report(sequence_type, index = nil)
+    # sequence_type – String name of the sequence (e.g. "FLURRY")
+    # index         – Integer (1-based or negative), default = last
+    def self.sequence_report(seq_type = nil, idx = nil)
+      # 1) usage if no sequence type given
+      types = DB.conn[:sequence_types]
+                  .select_map(:name)
+                  .uniq
+                  .sort_by(&:downcase)
+      if seq_type.nil?
+        puts <<~USAGE
+
+          Usage:
+            sequence_report("SEQUENCE_TYPE", [index])
+
+          Examples:
+            sequence_report("FLURRY")
+            sequence_report("FLURRY", 2)
+            sequence_report("FLURRY", -1)
+
+        USAGE
+        list_sequence_types
+        return
+      end
+
+      # 2) validate type (case-insensitive)
+      st = types.find { |n| n.casecmp?(seq_type.to_s) }
+      unless st
+        puts "Unknown sequence type #{seq_type}. Available:"
+        list_sequence_types
+        return
+      end
+
+      # 3) fetch all sequence_event IDs of that type
+      seq_ids = DB.conn[:sequence_events]
+                   .join(:sequence_types, id: :sequence_type_id)
+                   .where(Sequel[:sequence_types][:name] => st)
+                   .order(Sequel[:sequence_events][:id])
+                   .select_map(Sequel[:sequence_events][:id])
+
+      if seq_ids.empty?
+        puts "No sequences of type #{st} recorded."
+        return
+      end
+
+      # 4) pick the desired index
+      pos = if idx
+        i = idx.to_i
+        i > 0 ? (i-1) : (seq_ids.size + i)
+      else
+        seq_ids.size - 1
+      end
+
+      unless pos.between?(0, seq_ids.size - 1)
+        puts "Invalid index #{idx} for #{st} (#{seq_ids.size} sequences):"
+        seq_ids.each_with_index { |id,i| puts "   #{i+1} => Sequence ID #{id}" }
+        return
+      end
+
+      chosen_id = seq_ids[pos]
+      header    = "Sequence #{st.upcase} (#{pos+1}/#{seq_ids.size}) - ID #{chosen_id}"
+
+      # 5) gather all attack_events in order of sequence_step
+      atk_ids = DB.conn[:attack_events]
+                   .where(sequence_event_id: chosen_id)
+                   .order(:sequence_step)
+                   .select_map(:id)
+
+      if atk_ids.empty?
+        puts "#{header}\n\n  (no attacks recorded in this sequence)\n"
+        return
+      end
+
+      # 6) build rows, inserting a blank line between each top-level attack
+      rows = []
+      atk_ids.each_with_index do |aid, ai|
+        # look up the target creature for this attack
+        ci_id = DB.conn[:attack_events].where(id: aid).get(:creature_instance_id)
+        ci    = DB.conn[:creature_instances].where(id: ci_id).first
+        target_str = "#{ci[:noun].upcase} (#{ci[:exist_id]})"
+
+        # get the 5-col attack tree
+        tree = format_attack_tree(aid)
+
+        # append the 6th TARGET col (only on the first row of each attack)
+        tree.each_with_index do |row, ri|
+          rows << (ri == 0 ? row + [target_str] : row + [''])
+        end
+
+        # blank separator
+        rows << ['', '', '', '', '', ''] if ai < atk_ids.size - 1
+      end
+
+      # 7) print with 6 columns
+      cols = %w[Attack DMG STATUS CRIT_STUFFS FATAL? TARGET]
+      print_ascii_table(header, cols, rows)
     end
 
     # attack_name - String, e.g. "FIRE", or nil; if nil, displays a list of valid options
@@ -107,10 +313,17 @@ module CombatTracker
       # If no name or invalid name, print choices
       if attack_name.nil? ||
          !valid_names.map(&:upcase).include?(attack_name.to_s.upcase)
+        respond <<~USAGE
 
-        puts "\n> Available Attacks:"
-        valid_names.sort.each { |n| puts "   • #{n}" }
-        puts "\nUsage: CombatTracker::Reporter.attack_report(\"FIRE\", [index])\n\n"
+        Usage:
+          attack_report(attack, [index])
+        Examples:
+          attack_report("fire", 2)
+          attack_report("natures_fury", -1)
+
+        USAGE
+
+        list_attacks
         return
       end
 
@@ -120,7 +333,7 @@ module CombatTracker
       # build (or fetch) the in-memory sequence of global IDs
       seq = sequence_for(chosen)
       if seq.empty?
-        puts "No recorded #{chosen} attacks."
+        respond "No recorded #{chosen} attacks."
         return
       end
 
@@ -129,7 +342,7 @@ module CombatTracker
         raw = attack_index.to_i
         idx = raw > 0 ? raw - 1 : seq.size + raw
         unless idx.between?(0, seq.size - 1)
-          puts "Invalid index #{idx} for #{chosen} (have #{seq.size} events)."
+          respond "Invalid index #{idx} for #{chosen} (have #{seq.size} events)."
           return
         end
       else
@@ -154,6 +367,149 @@ module CombatTracker
                         rows)
     end
 
+    # Flare Report
+    # Generates statistics for a specific flare type
+    #
+    # @param flare_type [String] the name of the flare type to report on (case insensitive)
+    # @param session_id [Integer] optional session_id to filter by
+    # @return [Hash] the flare report data
+    def self.flare_report(flare_type = nil, session_id = nil)
+      # 1) no args -> usage + list of flare types
+      if flare_type.nil?
+        respond <<~USAGE
+
+          Usage:
+            flare_report("FLARE", [index])
+
+          Examples:
+            flare_report("BRIAR", 2)
+            flare_report("BLESSINGs_FLOURISH", -1)
+
+        USAGE
+        list_flares
+        return
+      end
+      
+      begin
+        # Find the flare type ID (case insensitive)
+        flare_type_record = DB.conn[:flare_types].where(Sequel.function(:upper, :name) => flare_type.upcase).first
+        
+        unless flare_type_record
+          Log.log(:ERROR, "REPORT", "Flare type not found: #{flare_type}")
+          display_flare_types
+          return { error: "Flare type not found" }
+        end
+        
+        flare_type_id = flare_type_record[:id]
+        flare_type_name = flare_type_record[:name]
+        
+        # Build the SQL query for flare data
+        session_condition = session_id ? "AND fe.session_id = #{session_id.to_i}" : ""
+        session_info = session_id ? "for session #{session_id}" : "across all sessions"
+        Log.log(:INFO, "REPORT", "Collecting flare data #{session_info}")
+
+          report = {
+            flare_type: flare_type_name,
+            session_id: session_id,
+            session_info: session_info
+          }
+        
+        flare_query = <<-SQL
+          SELECT
+            fe.id,
+            dc.is_fatal,
+            dc.damage,
+            dc.critical_rank,
+            loc.name AS location_name
+          FROM flare_events fe
+          JOIN flare_types ft ON fe.flare_type_id = ft.id
+          LEFT JOIN damage_components dc ON dc.flare_id = fe.id
+          LEFT JOIN locations loc ON dc.location_id = loc.id
+          WHERE ft.id = ? #{session_condition}
+        SQL
+        
+        # Execute the query
+        flares = DB.conn[flare_query, flare_type_id].all
+        
+        if flares.empty?
+          Log.log(:WARN, "REPORT", "No data found for flare type: #{flare_type_name}")
+          return { error: "No data found for this flare type" }
+        end
+
+        total_flares     = flares.size
+        fatal_count      = flares.count { |f| f[:is_fatal] }
+        crit_count       = flares.map { |f| f[:critical_rank] }.compact.size
+
+        report[:count] = {
+          total:            total_flares,
+          fatal:            fatal_count,
+          fatal_percentage: (fatal_count.to_f    / total_flares * 100).round(2),
+          criticals:        crit_count,
+          crit_percentage:  (crit_count.to_f     / total_flares * 100).round(2)
+        }
+
+        # Gather basic statistics
+        #damage_values = flares.flat_map { |f| f[:damages] || [] }.reject(&:zero?)
+        damage_values = flares.map { |f| f[:damage] }.compact.reject { |d| d == 0 }
+
+          damage_values = flares.map { |f| f[:damage] }.compact.reject(&:zero?)
+          sorted = damage_values.sort
+          report[:damage] = {
+            average: (sorted.sum.to_f / sorted.size).round(2),
+            median:  (sorted.size.odd? ?
+                        sorted[sorted.size/2] :
+                        (sorted[(sorted.size/2)-1] + sorted[sorted.size/2]) / 2.0),
+            minimum: sorted.first,
+            maximum: sorted.last,
+            range:   "#{sorted.first}..#{sorted.last}"
+          }
+        
+        # Skip if no damage data
+        if damage_values.empty?
+          Log.log(:WARN, "REPORT", "No damage data found for flare type: #{flare_type_name}")
+          return { error: "No damage data found for this flare type" }
+        end
+                
+        # Gather critical hit distribution
+        crit_ranks = flares.map { |f| f[:critical_rank] }.compact
+        total_crits = crit_ranks.size
+        rank_counts = (1..9).each_with_object({}) { |r,h| h[r]=0 }
+        crit_ranks.each { |r| rank_counts[r] += 1 }
+        rank_pcts   = rank_counts.transform_values { |c| (c.to_f/total_crits*100).round(2) }
+        high_pct    = (5..9).sum { |r| rank_counts[r] }.to_f/total_crits*100
+        low_pct     = (1..4).sum { |r| rank_counts[r] }.to_f/total_crits*100
+
+        group_map = {
+          'LEFT EYE' => 'EYES',       'RIGHT EYE' => 'EYES',
+          'LEFT ARM' => 'ARMS',       'RIGHT ARM' => 'ARMS',
+          'LEFT HAND'=> 'HANDS',      'RIGHT HAND'=> 'HANDS',
+          'LEFT LEG' => 'LEGS',       'RIGHT LEG' => 'LEGS',
+          'LEFT FOOT'=> 'FEET',       'RIGHT FOOT'=> 'FEET'
+        }
+        locs = flares.map { |f| f[:location_name] }.compact
+        loc_counts = locs.each_with_object(Hash.new(0)) do |loc,h|
+          h[ group_map.fetch(loc, loc) ] += 1
+        end
+        loc_pcts = loc_counts.transform_values { |c| (c.to_f/total_crits*100).round(2) }
+
+        report[:critical_distribution] = {
+          by_rank:            rank_pcts,
+          low_ranks_pct:      low_pct.round(2),
+          high_ranks_pct:     high_pct.round(2),
+          by_location:        loc_pcts
+        }
+        
+        # Display the report
+        msg = display_flare_report(report)
+        
+        respond Lich::Messaging.mono(msg)
+      rescue => e
+        Log.log(:ERROR, "REPORT", "Error generating flare report: #{e.message}")
+        Log.log(:ERROR, "REPORT", "Error backtrace: #{e.backtrace.join("\n")}")
+        return { error: e.message }
+      end
+    end
+
     private
 
     # Builds/caches the sorted list of global IDs for a given type
@@ -165,13 +521,125 @@ module CombatTracker
                                  .select_map(Sequel[:attack_events][:id])
     end
 
+    def self.list_in_columns(title, items)
+      return respond Lich::Messaging.mono("\nNo #{title.downcase} found.\n") if items.empty?
+
+      max_len   = items.map(&:length).max
+      col_width = max_len + 2
+
+      lines = items.each_slice(5).map do |slice|
+        slice.map { |n| n.ljust(col_width) }.join.rstrip
+      end
+
+      msg = "\n#{title}:\n"
+      lines.each { |ln| msg += "    #{ln}\n" }
+      respond Lich::Messaging.mono(msg)
+    end
+
+    # List all attack types
+    def self.list_attacks
+      attacks = DB.conn[:attack_types]
+                  .select_map(:name)
+                  .uniq
+                  .sort_by(&:downcase)
+      list_in_columns("Available Attack Types", attacks)
+    end
+
+    def self.list_flares
+      fl = DB.conn[:flare_types]
+             .select_map(:name)
+             .uniq
+             .sort_by(&:downcase)
+      list_in_columns("Available Flare Types", fl)
+    end
+
+    # Helper for invalid index
+    def self.list_flare_ordinals(ft_name, seq)
+      msg = "\n> #{ft_name} Events (index ⇒ ID):"
+      seq.each_with_index { |id,i| msg += "   #{i+1} => #{id}" }
+      respond Lich::Messaging.mono(msg)
+    end
+
+    # Format one flare (and any child attack) into rows
+    def self.format_flare_tree(flare_id, indent = 0)
+      rows = []
+      fl   = DB.conn[:flare_events].where(id: flare_id).first
+      name = DB.conn[:flare_types].where(id: fl[:flare_type_id]).get(:name)
+
+      # gather damage components
+      comps = DB.conn[:damage_components]
+                .where(flare_id: flare_id)
+                .join(:locations,
+                      Sequel[:locations][:id] => Sequel[:damage_components][:location_id])
+                .join(:critical_types,
+                      Sequel[:critical_types][:id] => Sequel[:damage_components][:critical_type])
+                .select(
+                  Sequel[:damage_components][:damage],
+                  Sequel[:damage_components][:is_fatal],
+                  Sequel[:locations][:name].as(:loc),
+                  Sequel[:damage_components][:critical_rank].as(:rank),
+                  Sequel[:critical_types][:name].as(:ctype)
+                )
+                .all
+
+      # first damage on header
+      if first = comps.shift
+        crit = "[#{first[:loc]} R#{first[:rank]} #{first[:ctype]}]"
+        rows << [
+          (' ' * indent) + name,
+          first[:damage].to_s,
+          '',        # flares have no status
+          crit,
+          first[:is_fatal] ? 'Y' : 'N'
+        ]
+      else
+        rows << [indent, name, '', '', '', '']
+      end
+
+      # remaining damage
+      comps.each do |dc|
+        crit = "[#{dc[:loc]} R#{dc[:rank]} #{dc[:ctype]}]"
+        rows << [
+          ' ' * indent,
+          dc[:damage].to_s,
+          '',
+          crit,
+          dc[:is_fatal] ? 'Y' : 'N'
+        ]
+      end
+
+      # nested child attack
+      if fl[:child_attack_id]
+        rows.concat format_attack_tree(fl[:child_attack_id], indent + 2)
+      end
+
+      rows
+    end
+
+    # You can keep your list_nouns exactly the same, but now:
+    def self.list_nouns
+      nouns = DB.conn[:creature_instances]
+                .select_map(:noun)
+                .uniq
+                .sort_by(&:downcase)
+      list_in_columns("Available Creature Nouns", nouns)
+    end
+
+    def self.list_sequence_types
+      types = DB.conn[:sequence_types]
+                .select_map(:name)
+                .uniq
+                .sort_by(&:downcase)
+      list_in_columns("Available Sequence Types", types)
+    end
+
     # Helpful listing when someone gives an out-of-range index
     def self.list_ordinals_for(name, seq)
-      puts "\n▶ #{name} Attacks Ordinals (index ⇒ global ID):"
+      msg = "\n> #{name} Attacks Ordinals (index => global ID):"
       seq.each_with_index do |id, i|
-        puts "   #{i+1} ⇒ #{id}"
+        msg += "   #{i+1} => #{id}"
       end
-      puts
+      respond Lich::Messaging.mono(msg)
     end
 
     # Find the attack_event row
@@ -229,26 +697,40 @@ module CombatTracker
                 .all
 
       # 3) Emit header + first damage (if present), or header alone
-      if first = comps.shift
+      outcome_id = atk[:outcome_id]
+      outcome_name = DB.conn[:outcome_types]
+                       .where(id: outcome_id)
+                       .get(:name)
+      
+      echo outcome_name
+      echo outcome_name
+
+      if outcome_id != 1
+        rows << [
+          (' ' * indent) + atk[:atype],
+          '',            # no damage
+          status,        # still show any statuses
+          outcome_name,  # show MISS, FUMBLE, etc.
+          ''             # no fatal flag
+        ]          
+      elsif first = comps.shift
         crit = "[#{first[:loc]} R#{first[:rank]} #{first[:ctype]}]"
         rows << [
-          indent,
-          atk[:atype],
+          (' ' * indent) + atk[:atype],
           first[:damage].to_s,
           status,
           crit,
           first[:is_fatal] ? 'Y' : 'N'
         ]
       else
-        rows << [ indent, atk[:atype], '', status, '', '' ]
+        rows << [ (' ' * indent) + atk[:atype], '', status, '', '' ]
       end
 
       # 4) Any remaining damage gets its own row
       comps.each do |dc|
         crit = "[#{dc[:loc]} R#{dc[:rank]} #{dc[:ctype]}]"
         rows << [
-          indent,
-          '',
+          ' ' * indent,
           dc[:damage].to_s,
           '',
           crit,
@@ -266,15 +748,8 @@ module CombatTracker
                    .where(id: flare[:flare_type_id])
                    .get(:name)
 
-          # flare header
-          rows << [ indent + 2, name, '', '', '', '' ]
-
-          if flare[:child_attack_id]
-            # recurse into the child attack
-            rows.concat format_attack_tree(flare[:child_attack_id], indent + 4)
-          else
-            # flat flare damage, one row each
-            DB.conn[:damage_components]
+          # gather all damage_components for this flare
+          flare_comps = DB.conn[:damage_components]
               .where(flare_id: flare[:id])
               .join(
                 :locations,
@@ -291,11 +766,30 @@ module CombatTracker
                 Sequel[:damage_components][:critical_rank].as(:rank),
                 Sequel[:critical_types][:name].as(:ctype)
               )
-              .each do |dc|
+                        .all
+
+          if first = flare_comps.shift
+            crit = "[#{first[:loc]} R#{first[:rank]} #{first[:ctype]}]"
+            rows << [
+              (' ' * (indent + 2)) + name,
+              first[:damage].to_s,
+              '',          # no status on flares
+              crit,
+              first[:is_fatal] ? 'Y' : 'N'
+            ]
+          else
+            rows << [ (' ' * (indent + 2)) + name, '', '', '', '' ]
+          end
+
+          if flare[:child_attack_id]
+            # recurse into the child attack
+            rows.concat format_attack_tree(flare[:child_attack_id], indent + 4)
+          else
+            # any remaining damage gets its own blank‐name rows
+            flare_comps.each do |dc|
                 crit = "[#{dc[:loc]} R#{dc[:rank]} #{dc[:ctype]}]"
                 rows << [
-                  indent + 2,
-                  '',
+                ' ' * (indent + 2),
                   dc[:damage].to_s,
                   '',
                   crit,
@@ -304,7 +798,6 @@ module CombatTracker
               end
           end
         end
-
       rows
     end
 
@@ -371,8 +864,10 @@ module CombatTracker
                    .join('; ')
 
       [
-        indent,
-        DB.conn[:flare_types].where(id: flare[:flare_type_id]).get(:name),
+        (' ' * indent) +
+          DB.conn[:flare_types]
+            .where(id: flare[:flare_type_id])
+            .get(:name),
         dmg.to_s,
         '',                               # STATUS blank
         crit_str.empty? ? '' : "[#{crit_str}]",
@@ -388,33 +883,108 @@ module CombatTracker
         .get(Sequel[:attack_types][:name])
     end
 
-    # Print a fixed-width ASCII table
-    def self.print_ascii_table(header, cols, rows)
-      # string-ify & apply indent
-      table = rows.map do |indent, *cells|
-        row = cells.map(&:to_s)
-        row[0] = ' ' * indent + row[0]
-        row
+    # Display a list of available flare types
+    def self.display_flare_types
+      flare_types = DB.conn[:flare_types].order(:name).map { |ft| ft[:name] }
+      
+      respond "\n"
+      respond "=== Available Flare Types ==="
+      flare_types.each_slice(4) do |slice|
+        respond slice.map { |name| name.ljust(20) }.join
+      end
+      respond "\n"
+    end
+
+    # Display the flare report in a readable format
+    def self.display_flare_report(r)
+      raw_name = r[:flare_type]
+      clean_name = raw_name.gsub("_"," ").split.map(&:capitalize).join(" ")
+      hdr = "\n=== #{clean_name} Flare Report #{r[:session_info]} ===\n"
+      underline = "=" * hdr.length
+
+      # summary two-column
+      msg += hdr
+      msg += underline
+      msg += format("\n    %-25s %15s", "Count: #{r[:count][:total]}",   "Average: #{r[:damage][:average]}")
+      msg += format("\n    %-25s %12s", "Fatal: #{r[:count][:fatal]} (#{r[:count][:fatal_percentage]}%)",
+                                                "Median: #{r[:damage][:median]}")
+      msg += format("\n    %-25s %15s", "Crits: #{r[:count][:criticals]} (#{r[:count][:crit_percentage]}%)",
+                                                "Range: #{r[:damage][:range]}")
+      msg += "\n"
+
+      # build sorted arrays of [key, pct]
+      ranks = r[:critical_distribution][:by_rank].sort_by(&:first)
+      locs  = r[:critical_distribution][:by_location].sort_by(&:first)
+
+      # figure out how many rows we need
+      rows = [ranks.size, locs.size].max
+
+      # header for side-by-side tables
+      msg += "\n     Crit Rank                   Crit Location"
+      msg += "\n  Rank   | Percent           Location | Percent"
+      msg += "\n  ------ | --------          -------- | --------"
+
+      # walk both arrays by index
+      rows.times do |i|
+        rank, pct     = ranks[i] || [nil, 0]
+        loc, loc_pct  = locs[i]  || ["", 0]
+
+        # format each side with placeholders when missing
+        left  = rank ? format("Rank %-1d | %6.2f%%", rank, pct) : "                "
+        right = format("     %-7s | %6.2f%%", loc, loc_pct)
+
+        msg += "\n  #{left}       #{right}"
       end
 
+      # summary rows for low/high ranks
+      msg += format("\n  %-6s | %6.2f%%", "R1 R4", r[:critical_distribution][:low_ranks_pct])
+      msg += format("\n  %-6s | %6.2f%%", "R5 R9", r[:critical_distribution][:high_ranks_pct])
+      return msg.to_s
+    end
+
+
+    # Print a fixed-width ASCII table
+    def self.print_ascii_table(title, cols, rows)
+      # Helper to strip out <...> tags for width-calculations
+       strip_tags = ->(s){ s.to_s.gsub(/<[^>]+>/, '') }
+
       # compute column widths
-      widths = cols.map.with_index do |h,i|
-        [ h.length, table.map { |r| r[i].length }.max || 0 ].max
+      widths = cols.each_with_index.map do |col, i|
+        max_cell = rows.map { |r| strip_tags.call(r[i]).length }.max || 0
+        [ strip_tags.call(col).length, max_cell ].max
       end
 
       # build separators
-      sep = '+' + widths.map { |w| '-' * (w + 2) }.join('+') + '+'
-      hdr = '| ' + cols.map.with_index { |h,i| h.ljust(widths[i]) }.join(' | ') + ' |'
+      sep = "\n+" + widths.map { |w| '-' * (w + 2) }.join('+') + '+'
+      
+      msg = title
+      msg += sep
 
-      msg = header + "\n"
-      msg += sep + "\n"
-      msg += hdr + "\n"
-      msg += sep + "\n"
-      table.each do |row|
-        msg +=  '| ' + row.map.with_index { |cell,i| cell.ljust(widths[i]) }.join(' | ') + ' |'  + "\n"
+      header = cols.each_with_index.map do |col, i|
+        text = col.to_s
+        pad = widths[i] - strip_tags.call(text).length
+        " #{text}#{' '*pad} "
+      end.join('|')
+      msg += "\n|#{header}|"
+      msg += sep
+
+      rows.each do |row|
+        line = cols.each_with_index.map do |_col, i|
+          cell = row[i] || ''
+          text = cell.to_s
+          pad = widths[i] - strip_tags.call(text).length
+          " #{text}#{' '*pad} "
+        end.join('|')
+        msg += "\n|#{line}|"
       end
       msg += sep
       respond Lich::Messaging.mono(msg)
     end
   end
 end
+
+
+
+# Map statuses to letters or something ..
+# add resolution result .. 
+# come up with better format for CRIT_STUFFS ... lol
