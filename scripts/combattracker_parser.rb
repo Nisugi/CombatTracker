@@ -147,7 +147,7 @@ module CombatTracker
       FlareDef.new(:ghezyte, [/\*\* Cords of plasma-veined grey mist seep from your .+? and entangle (?<target>[^,]+), causing .+? to tremble violently! \*\*/].freeze, false),
       FlareDef.new(:grapple, [/\*\* Your .+? releases a twisted tendril of force! \*\*/].freeze, true),
       FlareDef.new(:guiding_light, [/\*\* Your .+? sprays with a burst of plasma energy! \*\*/].freeze, true),
-      FlareDef.new(:holy_water, /\*\* Your .+? sprays forth a shower of pure water! \*\*/.freeze, true, false),
+      FlareDef.new(:holy_water, [/\*\* Your .+? sprays forth a shower of pure water! \*\*/].freeze, true, false),
       FlareDef.new(:impact, [/\*\* Your .+? release a blast of vibrating energy at the (?<target>[^!]+)! \*\*/].freeze, true),
       FlareDef.new(:lightning, [/\*\* Your .+? emits a searing bolt of lightning! \*\*/].freeze, true),
       FlareDef.new(:lightning_gef, [/\*\* A vicious torrent of crackling lightning surges from .+? and strikes (?<target>[^!]+)! \*\*/].freeze, true),
