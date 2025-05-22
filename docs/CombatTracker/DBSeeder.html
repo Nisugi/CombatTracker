@@ -78,7 +78,7 @@
   
   <dl>
     <dt>Defined in:</dt>
-    <dd>lib/combattracker.rb</dd>
+    <dd>combattracker.rb</dd>
   </dl>
   
 </div>
@@ -165,47 +165,59 @@
       <pre class="lines">
 
 
-104
-105
-106
-107
-108
-109
-110
-111
-112
-113
-114
-115
-116
-117
-118
-119
-120
-121
-122
-123
-124
-125
-126
-127
-128
-129
-130
-131
-132
-133
-134
-135
-136
-137
-138</pre>
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/combattracker.rb', line 104</span>
+      <pre class="code"><span class="info file"># File 'combattracker.rb', line 139</span>
 
 <span class='kw'>def</span> <span class='kw'>self</span><span class='period'>.</span><span class='id identifier rubyid_seed!'>seed!</span>
   <span class='id identifier rubyid_conn'>conn</span> <span class='op'>=</span> <span class='const'><span class='object_link'><a href="DB.html" title="CombatTracker::DB (module)">DB</a></span></span><span class='period'>.</span><span class='id identifier rubyid_conn'><span class='object_link'><a href="DB.html#conn-instance_method" title="CombatTracker::DB#conn (method)">conn</a></span></span>
+
+  <span class='const'><span class='object_link'><a href="Parser.html" title="CombatTracker::Parser (module)">Parser</a></span></span><span class='op'>::</span><span class='const'><span class='object_link'><a href="Parser.html#SEQUENCE_DEFS-constant" title="CombatTracker::Parser::SEQUENCE_DEFS (constant)">SEQUENCE_DEFS</a></span></span><span class='period'>.</span><span class='id identifier rubyid_each_with_index'>each_with_index</span> <span class='kw'>do</span> <span class='op'>|</span><span class='id identifier rubyid_seq_def'>seq_def</span><span class='op'>|</span>
+    <span class='id identifier rubyid_conn'>conn</span><span class='lbracket'>[</span><span class='symbol'>:sequence_types</span><span class='rbracket'>]</span>
+      <span class='period'>.</span><span class='id identifier rubyid_insert_conflict'>insert_conflict</span><span class='lparen'>(</span><span class='label'>target:</span> <span class='symbol'>:name</span><span class='comma'>,</span> <span class='label'>do_nothing:</span> <span class='kw'>true</span><span class='rparen'>)</span>
+      <span class='period'>.</span><span class='id identifier rubyid_insert'>insert</span><span class='lparen'>(</span><span class='label'>name:</span> <span class='id identifier rubyid_seq_def'>seq_def</span><span class='period'>.</span><span class='id identifier rubyid_name'>name</span><span class='period'>.</span><span class='id identifier rubyid_to_s'>to_s</span><span class='period'>.</span><span class='id identifier rubyid_upcase'>upcase</span><span class='rparen'>)</span>
+  <span class='kw'>end</span>
 
   <span class='const'><span class='object_link'><a href="Parser.html" title="CombatTracker::Parser (module)">Parser</a></span></span><span class='op'>::</span><span class='const'><span class='object_link'><a href="Parser.html#ATTACK_DEFS-constant" title="CombatTracker::Parser::ATTACK_DEFS (constant)">ATTACK_DEFS</a></span></span><span class='period'>.</span><span class='id identifier rubyid_each_with_index'>each_with_index</span> <span class='kw'>do</span> <span class='op'>|</span><span class='id identifier rubyid_atk_def'>atk_def</span><span class='op'>|</span>
     <span class='id identifier rubyid_conn'>conn</span><span class='lbracket'>[</span><span class='symbol'>:attack_types</span><span class='rbracket'>]</span>
@@ -249,7 +261,7 @@
 </div>
 
       <div id="footer">
-  Generated on Mon May 19 03:42:29 2025 by
+  Generated on Thu May 22 10:20:39 2025 by
   <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
   0.9.37 (ruby-3.3.4).
 </div>

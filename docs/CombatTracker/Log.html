@@ -78,7 +78,7 @@
   
   <dl>
     <dt>Defined in:</dt>
-    <dd>lib/combattracker.rb</dd>
+    <dd>combattracker.rb</dd>
   </dl>
   
 </div>
@@ -239,12 +239,12 @@
       <pre class="lines">
 
 
-31
-32
-33</pre>
+66
+67
+68</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/combattracker.rb', line 31</span>
+      <pre class="code"><span class="info file"># File 'combattracker.rb', line 66</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_level'>level</span>
   <span class='ivar'>@level</span>
@@ -326,16 +326,16 @@
       <pre class="lines">
 
 
-43
-44
-45
-46
-47
-48
-49</pre>
+78
+79
+80
+81
+82
+83
+84</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/combattracker.rb', line 43</span>
+      <pre class="code"><span class="info file"># File 'combattracker.rb', line 78</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_level='>level=</span><span class='lparen'>(</span><span class='id identifier rubyid_lvl'>lvl</span><span class='rparen'>)</span>
   <span class='kw'>if</span> <span class='const'><span class='object_link'><a href="#LEVELS-constant" title="CombatTracker::Log::LEVELS (constant)">LEVELS</a></span></span><span class='period'>.</span><span class='id identifier rubyid_include?'>include?</span><span class='lparen'>(</span><span class='id identifier rubyid_lvl'>lvl</span><span class='rparen'>)</span>
@@ -435,14 +435,14 @@
       <pre class="lines">
 
 
-59
-60
-61
-62
-63</pre>
+94
+95
+96
+97
+98</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/combattracker.rb', line 59</span>
+      <pre class="code"><span class="info file"># File 'combattracker.rb', line 94</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_log'>log</span><span class='lparen'>(</span><span class='id identifier rubyid_level'>level</span><span class='comma'>,</span> <span class='id identifier rubyid_ctx'>ctx</span><span class='comma'>,</span> <span class='id identifier rubyid_msg'>msg</span><span class='rparen'>)</span>
   <span class='kw'>return</span> <span class='kw'>if</span> <span class='const'><span class='object_link'><a href="#LEVELS-constant" title="CombatTracker::Log::LEVELS (constant)">LEVELS</a></span></span><span class='period'>.</span><span class='id identifier rubyid_index'>index</span><span class='lparen'>(</span><span class='id identifier rubyid_level'>level</span><span class='rparen'>)</span> <span class='op'>&lt;</span> <span class='const'><span class='object_link'><a href="#LEVELS-constant" title="CombatTracker::Log::LEVELS (constant)">LEVELS</a></span></span><span class='period'>.</span><span class='id identifier rubyid_index'>index</span><span class='lparen'>(</span><span class='ivar'>@level</span><span class='rparen'>)</span>
@@ -459,7 +459,7 @@
 </div>
 
       <div id="footer">
-  Generated on Mon May 19 03:42:29 2025 by
+  Generated on Thu May 22 10:20:39 2025 by
   <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
   0.9.37 (ruby-3.3.4).
 </div>
