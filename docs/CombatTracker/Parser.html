@@ -78,7 +78,7 @@
   
   <dl>
     <dt>Defined in:</dt>
-    <dd>lib/combattracker_parser.rb</dd>
+    <dd>combattracker_parser.rb</dd>
   </dl>
   
 </div>
@@ -89,7 +89,7 @@
     
   
     
-      <strong class="classes">Classes:</strong> <span class='object_link'><a href="Parser/AttackDef.html" title="CombatTracker::Parser::AttackDef (class)">AttackDef</a></span>, <span class='object_link'><a href="Parser/FlareDef.html" title="CombatTracker::Parser::FlareDef (class)">FlareDef</a></span>, <span class='object_link'><a href="Parser/LodgedDef.html" title="CombatTracker::Parser::LodgedDef (class)">LodgedDef</a></span>, <span class='object_link'><a href="Parser/OutcomeDef.html" title="CombatTracker::Parser::OutcomeDef (class)">OutcomeDef</a></span>, <span class='object_link'><a href="Parser/ResolutionDef.html" title="CombatTracker::Parser::ResolutionDef (class)">ResolutionDef</a></span>, <span class='object_link'><a href="Parser/StatusDef.html" title="CombatTracker::Parser::StatusDef (class)">StatusDef</a></span>
+      <strong class="classes">Classes:</strong> <span class='object_link'><a href="Parser/AttackDef.html" title="CombatTracker::Parser::AttackDef (class)">AttackDef</a></span>, <span class='object_link'><a href="Parser/FlareDef.html" title="CombatTracker::Parser::FlareDef (class)">FlareDef</a></span>, <span class='object_link'><a href="Parser/LodgedDef.html" title="CombatTracker::Parser::LodgedDef (class)">LodgedDef</a></span>, <span class='object_link'><a href="Parser/OutcomeDef.html" title="CombatTracker::Parser::OutcomeDef (class)">OutcomeDef</a></span>, <span class='object_link'><a href="Parser/ResolutionDef.html" title="CombatTracker::Parser::ResolutionDef (class)">ResolutionDef</a></span>, <span class='object_link'><a href="Parser/SequenceDef.html" title="CombatTracker::Parser::SequenceDef (class)">SequenceDef</a></span>, <span class='object_link'><a href="Parser/StatusDef.html" title="CombatTracker::Parser::StatusDef (class)">StatusDef</a></span>
     
   
 </p>
@@ -122,44 +122,68 @@
           
         </dt>
         <dd><pre class="code"><span class='lbracket'>[</span>
-  <span class='const'><span class='object_link'><a href="Parser/AttackDef.html" title="CombatTracker::Parser::AttackDef (class)">AttackDef</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='symbol'>:attack</span><span class='comma'>,</span> <span class='lbracket'>[</span><span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>You(?: take aim and)? swing .+? at (?&lt;target&gt;[^!]+)!</span><span class='regexp_end'>/</span></span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span><span class='rparen'>)</span><span class='comma'>,</span>
-  <span class='const'><span class='object_link'><a href="Parser/AttackDef.html" title="CombatTracker::Parser::AttackDef (class)">AttackDef</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='symbol'>:barrage</span><span class='comma'>,</span> <span class='lbracket'>[</span><span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>Nocking another arrow to your bowstring, you swiftly draw back and loose again!</span><span class='regexp_end'>/</span></span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span><span class='rparen'>)</span><span class='comma'>,</span>
+  <span class='const'><span class='object_link'><a href="Parser/AttackDef.html" title="CombatTracker::Parser::AttackDef (class)">AttackDef</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='symbol'>:attack</span><span class='comma'>,</span> <span class='lbracket'>[</span><span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>You(?&lt;aimed&gt; take aim and)? swing .+? at (?&lt;target&gt;[^!]+)!</span><span class='regexp_end'>/</span></span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span><span class='comma'>,</span> <span class='kw'>true</span><span class='comma'>,</span> <span class='kw'>false</span><span class='comma'>,</span> <span class='kw'>false</span><span class='rparen'>)</span><span class='comma'>,</span>
+  <span class='const'><span class='object_link'><a href="Parser/AttackDef.html" title="CombatTracker::Parser::AttackDef (class)">AttackDef</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='symbol'>:barrage</span><span class='comma'>,</span> <span class='lbracket'>[</span><span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>Nocking another arrow to your bowstring, you swiftly draw back and loose again!</span><span class='regexp_end'>/</span></span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span><span class='comma'>,</span> <span class='kw'>true</span><span class='comma'>,</span> <span class='kw'>false</span><span class='comma'>,</span> <span class='kw'>false</span><span class='rparen'>)</span><span class='comma'>,</span>
   <span class='const'><span class='object_link'><a href="Parser/AttackDef.html" title="CombatTracker::Parser::AttackDef (class)">AttackDef</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='symbol'>:companion</span><span class='comma'>,</span> <span class='lbracket'>[</span>
     <span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>(?&lt;companion&gt;.+?) pounces on (?&lt;target&gt;[^,]+), knocking the .+? painfully to the ground!</span><span class='regexp_end'>/</span></span><span class='comma'>,</span>
     <span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>The (?&lt;companion&gt;.+?) takes the opportunity to slash .+? claws at the (?&lt;target&gt;.+?) \w+!</span><span class='regexp_end'>/</span></span><span class='comma'>,</span>
     <span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>(?&lt;companion&gt;.+?) charges forward and slashes .+? claws at (?&lt;target&gt;.+?) faster than .+? can react!</span><span class='regexp_end'>/</span></span>
-  <span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span><span class='rparen'>)</span><span class='comma'>,</span>
-  <span class='const'><span class='object_link'><a href="Parser/AttackDef.html" title="CombatTracker::Parser::AttackDef (class)">AttackDef</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='symbol'>:cripple</span><span class='comma'>,</span> <span class='lbracket'>[</span><span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>You reverse your grip on your .+? and dart toward (?&lt;target&gt;.+?) at an angle!</span><span class='regexp_end'>/</span></span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span><span class='rparen'>)</span><span class='comma'>,</span>
-  <span class='const'><span class='object_link'><a href="Parser/AttackDef.html" title="CombatTracker::Parser::AttackDef (class)">AttackDef</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='symbol'>:fire</span><span class='comma'>,</span> <span class='lbracket'>[</span><span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>You(?: take aim and)? fire .+? at (?&lt;target&gt;[^!]+)!</span><span class='regexp_end'>/</span></span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span><span class='rparen'>)</span><span class='comma'>,</span>
+  <span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span><span class='comma'>,</span> <span class='kw'>true</span><span class='comma'>,</span> <span class='kw'>false</span><span class='comma'>,</span> <span class='kw'>false</span><span class='rparen'>)</span><span class='comma'>,</span>
+  <span class='const'><span class='object_link'><a href="Parser/AttackDef.html" title="CombatTracker::Parser::AttackDef (class)">AttackDef</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='symbol'>:cripple</span><span class='comma'>,</span> <span class='lbracket'>[</span><span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>You reverse your grip on your .+? and dart toward (?&lt;target&gt;.+?) at an angle!</span><span class='regexp_end'>/</span></span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span><span class='comma'>,</span> <span class='kw'>true</span><span class='comma'>,</span> <span class='kw'>false</span><span class='comma'>,</span> <span class='kw'>false</span><span class='rparen'>)</span><span class='comma'>,</span>
+  <span class='const'><span class='object_link'><a href="Parser/AttackDef.html" title="CombatTracker::Parser::AttackDef (class)">AttackDef</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='symbol'>:earthen_fury</span><span class='comma'>,</span> <span class='lbracket'>[</span>
+    <span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>Fiery debris explodes from the ground beneath (?&lt;target&gt;[^!]+)!</span><span class='regexp_end'>/</span></span><span class='comma'>,</span>
+    <span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>Craggy debris explodes from the ground beneath (?&lt;target&gt;[^!]+)!</span><span class='regexp_end'>/</span></span><span class='comma'>,</span>
+    <span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>The earth cracks beneath (?&lt;target&gt;[^,]+), releasing a column of frigid air!</span><span class='regexp_end'>/</span></span><span class='comma'>,</span>
+    <span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>Icy stalagmites burst from the ground beneath (?&lt;target&gt;[^!]+)!</span><span class='regexp_end'>/</span></span>
+  <span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span><span class='comma'>,</span> <span class='kw'>true</span><span class='comma'>,</span> <span class='kw'>true</span><span class='comma'>,</span> <span class='kw'>false</span><span class='rparen'>)</span><span class='comma'>,</span>
+  <span class='const'><span class='object_link'><a href="Parser/AttackDef.html" title="CombatTracker::Parser::AttackDef (class)">AttackDef</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='symbol'>:fire</span><span class='comma'>,</span> <span class='lbracket'>[</span><span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>You(?&lt;aimed&gt; take aim and)? fire .+? at (?&lt;target&gt;[^!]+)!</span><span class='regexp_end'>/</span></span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span><span class='comma'>,</span> <span class='kw'>true</span><span class='comma'>,</span> <span class='kw'>false</span><span class='comma'>,</span> <span class='kw'>false</span><span class='rparen'>)</span><span class='comma'>,</span>
   <span class='const'><span class='object_link'><a href="Parser/AttackDef.html" title="CombatTracker::Parser::AttackDef (class)">AttackDef</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='symbol'>:flurry</span><span class='comma'>,</span> <span class='lbracket'>[</span>
     <span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>Flowing with deadly grace, you smoothly reverse the direction of your blades and slash again!</span><span class='regexp_end'>/</span></span><span class='comma'>,</span>
     <span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>With fluid motion, you guide your flashing blades, slicing toward (?&lt;target&gt;.+?) at the apex of their deadly arc!</span><span class='regexp_end'>/</span></span>
-  <span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span><span class='rparen'>)</span><span class='comma'>,</span>
-  <span class='const'><span class='object_link'><a href="Parser/AttackDef.html" title="CombatTracker::Parser::AttackDef (class)">AttackDef</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='symbol'>:grapple</span><span class='comma'>,</span> <span class='lbracket'>[</span><span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>You(?: make a precise)? attempt to grapple (?&lt;target&gt;[^!]+)!</span><span class='regexp_end'>/</span></span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span><span class='rparen'>)</span><span class='comma'>,</span>
-  <span class='const'><span class='object_link'><a href="Parser/AttackDef.html" title="CombatTracker::Parser::AttackDef (class)">AttackDef</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='symbol'>:jab</span><span class='comma'>,</span> <span class='lbracket'>[</span><span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>You(?: make a precise)? attempt to jab (?&lt;target&gt;[^!]+)!</span><span class='regexp_end'>/</span></span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span><span class='rparen'>)</span><span class='comma'>,</span>
-  <span class='const'><span class='object_link'><a href="Parser/AttackDef.html" title="CombatTracker::Parser::AttackDef (class)">AttackDef</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='symbol'>:punch</span><span class='comma'>,</span> <span class='lbracket'>[</span><span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>You(?: make a precise)? attempt to punch (?&lt;target&gt;[^!]+)!</span><span class='regexp_end'>/</span></span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span><span class='rparen'>)</span><span class='comma'>,</span>
-  <span class='const'><span class='object_link'><a href="Parser/AttackDef.html" title="CombatTracker::Parser::AttackDef (class)">AttackDef</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='symbol'>:kick</span><span class='comma'>,</span> <span class='lbracket'>[</span><span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>You(?: make a precise)? attempt to kick (?&lt;target&gt;[^!]+)!</span><span class='regexp_end'>/</span></span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span><span class='rparen'>)</span><span class='comma'>,</span>
-  <span class='const'><span class='object_link'><a href="Parser/AttackDef.html" title="CombatTracker::Parser::AttackDef (class)">AttackDef</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='symbol'>:natures_fury</span><span class='comma'>,</span> <span class='lbracket'>[</span><span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>The surroundings advance upon (?&lt;target&gt;.+?) with relentless fury!</span><span class='regexp_end'>/</span></span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span><span class='rparen'>)</span><span class='comma'>,</span>
-  <span class='const'><span class='object_link'><a href="Parser/AttackDef.html" title="CombatTracker::Parser::AttackDef (class)">AttackDef</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='symbol'>:spikethorn</span><span class='comma'>,</span> <span class='lbracket'>[</span><span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>Dozens of long thorns suddenly grow out from the ground underneath (?&lt;target&gt;[^!]+)!</span><span class='regexp_end'>/</span></span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span><span class='rparen'>)</span><span class='comma'>,</span>
-  <span class='const'><span class='object_link'><a href="Parser/AttackDef.html" title="CombatTracker::Parser::AttackDef (class)">AttackDef</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='symbol'>:sunburst</span><span class='comma'>,</span> <span class='lbracket'>[</span><span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>The dazzling solar blaze flashes before (?&lt;target&gt;[^!]+)!</span><span class='regexp_end'>/</span></span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span><span class='rparen'>)</span><span class='comma'>,</span>
+  <span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span><span class='comma'>,</span> <span class='kw'>true</span><span class='comma'>,</span> <span class='kw'>false</span><span class='comma'>,</span> <span class='kw'>false</span><span class='rparen'>)</span><span class='comma'>,</span>
+  <span class='const'><span class='object_link'><a href="Parser/AttackDef.html" title="CombatTracker::Parser::AttackDef (class)">AttackDef</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='symbol'>:grapple</span><span class='comma'>,</span> <span class='lbracket'>[</span><span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>You(?: make a precise)? attempt to grapple (?&lt;target&gt;[^!]+)!</span><span class='regexp_end'>/</span></span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span><span class='comma'>,</span> <span class='kw'>true</span><span class='comma'>,</span> <span class='kw'>false</span><span class='comma'>,</span> <span class='kw'>false</span><span class='rparen'>)</span><span class='comma'>,</span>
+  <span class='const'><span class='object_link'><a href="Parser/AttackDef.html" title="CombatTracker::Parser::AttackDef (class)">AttackDef</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='symbol'>:jab</span><span class='comma'>,</span> <span class='lbracket'>[</span><span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>You(?: make a precise)? attempt to jab (?&lt;target&gt;[^!]+)!</span><span class='regexp_end'>/</span></span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span><span class='comma'>,</span> <span class='kw'>true</span><span class='comma'>,</span> <span class='kw'>false</span><span class='comma'>,</span> <span class='kw'>false</span><span class='rparen'>)</span><span class='comma'>,</span>
+  <span class='const'><span class='object_link'><a href="Parser/AttackDef.html" title="CombatTracker::Parser::AttackDef (class)">AttackDef</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='symbol'>:punch</span><span class='comma'>,</span> <span class='lbracket'>[</span><span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>You(?: make a precise)? attempt to punch (?&lt;target&gt;[^!]+)!</span><span class='regexp_end'>/</span></span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span><span class='comma'>,</span> <span class='kw'>true</span><span class='comma'>,</span> <span class='kw'>false</span><span class='comma'>,</span> <span class='kw'>false</span><span class='rparen'>)</span><span class='comma'>,</span>
+  <span class='const'><span class='object_link'><a href="Parser/AttackDef.html" title="CombatTracker::Parser::AttackDef (class)">AttackDef</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='symbol'>:kick</span><span class='comma'>,</span> <span class='lbracket'>[</span><span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>You(?: make a precise)? attempt to kick (?&lt;target&gt;[^!]+)!</span><span class='regexp_end'>/</span></span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span><span class='comma'>,</span> <span class='kw'>true</span><span class='comma'>,</span> <span class='kw'>false</span><span class='comma'>,</span> <span class='kw'>false</span><span class='rparen'>)</span><span class='comma'>,</span>
+  <span class='const'><span class='object_link'><a href="Parser/AttackDef.html" title="CombatTracker::Parser::AttackDef (class)">AttackDef</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='symbol'>:natures_fury</span><span class='comma'>,</span> <span class='lbracket'>[</span><span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>The surroundings advance upon (?&lt;target&gt;.+?) with relentless fury!</span><span class='regexp_end'>/</span></span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span><span class='comma'>,</span> <span class='kw'>true</span><span class='comma'>,</span> <span class='kw'>true</span><span class='comma'>,</span> <span class='kw'>true</span><span class='rparen'>)</span><span class='comma'>,</span>
+  <span class='const'><span class='object_link'><a href="Parser/AttackDef.html" title="CombatTracker::Parser::AttackDef (class)">AttackDef</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='symbol'>:spikethorn</span><span class='comma'>,</span> <span class='lbracket'>[</span><span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>Dozens of long thorns suddenly grow out from the ground underneath (?&lt;target&gt;[^!]+)!</span><span class='regexp_end'>/</span></span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span><span class='comma'>,</span> <span class='kw'>true</span><span class='comma'>,</span> <span class='kw'>true</span><span class='comma'>,</span> <span class='kw'>false</span><span class='rparen'>)</span><span class='comma'>,</span>
+  <span class='const'><span class='object_link'><a href="Parser/AttackDef.html" title="CombatTracker::Parser::AttackDef (class)">AttackDef</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='symbol'>:sunburst</span><span class='comma'>,</span> <span class='lbracket'>[</span><span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>The dazzling solar blaze flashes before (?&lt;target&gt;[^!]+)!</span><span class='regexp_end'>/</span></span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span><span class='comma'>,</span> <span class='kw'>true</span><span class='comma'>,</span> <span class='kw'>true</span><span class='comma'>,</span> <span class='kw'>true</span><span class='rparen'>)</span><span class='comma'>,</span>
   <span class='const'><span class='object_link'><a href="Parser/AttackDef.html" title="CombatTracker::Parser::AttackDef (class)">AttackDef</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='symbol'>:tangleweed</span><span class='comma'>,</span> <span class='lbracket'>[</span>
     <span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>The (?&lt;weed&gt;.+?) lashes out violently at (?&lt;target&gt;[^,]+), dragging .+? to the ground!</span><span class='regexp_end'>/</span></span><span class='comma'>,</span>
     <span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>The (?&lt;weed&gt;.+?) lashes out at (?&lt;target&gt;[^,]+), wraps itself around .+? body and entangles .+? on the ground\.</span><span class='regexp_end'>/</span></span>
-  <span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span><span class='rparen'>)</span><span class='comma'>,</span>
-  <span class='const'><span class='object_link'><a href="Parser/AttackDef.html" title="CombatTracker::Parser::AttackDef (class)">AttackDef</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='symbol'>:twinhammer</span><span class='comma'>,</span> <span class='lbracket'>[</span><span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>You raise your hands high, lace them together and bring them crashing down towards (?&lt;target&gt;[^!]+)!</span><span class='regexp_end'>/</span></span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span><span class='rparen'>)</span><span class='comma'>,</span>
+  <span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span><span class='comma'>,</span> <span class='kw'>true</span><span class='comma'>,</span> <span class='kw'>true</span><span class='comma'>,</span> <span class='kw'>false</span><span class='rparen'>)</span><span class='comma'>,</span>
+  <span class='const'><span class='object_link'><a href="Parser/AttackDef.html" title="CombatTracker::Parser::AttackDef (class)">AttackDef</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='symbol'>:twinhammer</span><span class='comma'>,</span> <span class='lbracket'>[</span><span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>You raise your hands high, lace them together and bring them crashing down towards (?&lt;target&gt;[^!]+)!</span><span class='regexp_end'>/</span></span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span><span class='comma'>,</span> <span class='kw'>true</span><span class='comma'>,</span> <span class='kw'>false</span><span class='comma'>,</span> <span class='kw'>false</span><span class='rparen'>)</span><span class='comma'>,</span>
   <span class='const'><span class='object_link'><a href="Parser/AttackDef.html" title="CombatTracker::Parser::AttackDef (class)">AttackDef</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='symbol'>:volley</span><span class='comma'>,</span> <span class='lbracket'>[</span>
     <span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>An arrow finds its mark!  (?&lt;target&gt;.+?) is hit!</span><span class='regexp_end'>/</span></span><span class='comma'>,</span>
     <span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>An arrow pierces (?&lt;target&gt;[^!]+)!</span><span class='regexp_end'>/</span></span><span class='comma'>,</span>
     <span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>An arrow skewers (?&lt;target&gt;[^!]+)!</span><span class='regexp_end'>/</span></span><span class='comma'>,</span>
     <span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>(?&lt;target&gt;.+?) is struck by a falling arrow!</span><span class='regexp_end'>/</span></span><span class='comma'>,</span>
     <span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>(?&lt;target&gt;.+?) is transfixed by an arrow&#39;s descent!</span><span class='regexp_end'>/</span></span>
-  <span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span><span class='rparen'>)</span><span class='comma'>,</span>
+  <span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span><span class='comma'>,</span> <span class='kw'>true</span><span class='comma'>,</span> <span class='kw'>false</span><span class='comma'>,</span> <span class='kw'>true</span><span class='rparen'>)</span><span class='comma'>,</span>
   <span class='const'><span class='object_link'><a href="Parser/AttackDef.html" title="CombatTracker::Parser::AttackDef (class)">AttackDef</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='symbol'>:wblade</span><span class='comma'>,</span> <span class='lbracket'>[</span>
     <span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>You turn, blade spinning in your hand toward (?&lt;target&gt;[^!]+)!</span><span class='regexp_end'>/</span></span><span class='comma'>,</span>
     <span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>You angle your blade at (?&lt;target&gt;.+?) in a crosswise slash!</span><span class='regexp_end'>/</span></span><span class='comma'>,</span>
     <span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>In a fluid whirl, you sweep your blade at (?&lt;target&gt;[^!]+)!</span><span class='regexp_end'>/</span></span><span class='comma'>,</span>
     <span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>Your blade licks out at (?&lt;target&gt;.+?) in a blurred arc!</span><span class='regexp_end'>/</span></span>
-  <span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span><span class='rparen'>)</span><span class='comma'>,</span>
+  <span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span><span class='comma'>,</span> <span class='kw'>true</span><span class='comma'>,</span> <span class='kw'>false</span><span class='comma'>,</span> <span class='kw'>true</span><span class='rparen'>)</span><span class='comma'>,</span>
+<span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span></pre></dd>
+      
+        <dt id="SEQUENCE_DEFS-constant" class="">SEQUENCE_DEFS =
+          
+        </dt>
+        <dd><pre class="code"><span class='lbracket'>[</span>
+  <span class='comment'>#SequenceDef.new(:barrage, [/Drawing several .+? from your .+?, you grip them loosely between your fingers in preparation for a rapid barrage\./].freeze, [
+</span>  <span class='comment'>#  /Upon firing your last .+?, you release a measured breath and lower your .+?\./,
+</span>  <span class='comment'>#  /Distracted, you hesitate, and your assault is broken.  You give your blades a quick, sweeping flick of annoyance as you lower them\./].freeze),
+</span>  <span class='const'><span class='object_link'><a href="Parser/SequenceDef.html" title="CombatTracker::Parser::SequenceDef (class)">SequenceDef</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='symbol'>:earthen_fury</span><span class='comma'>,</span> <span class='lbracket'>[</span>
+    <span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>The ground beneath (?&lt;target&gt;.+?) begins to boil violently!</span><span class='regexp_end'>/</span></span><span class='comma'>,</span>
+    <span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>The ground beneath (?&lt;target&gt;.+?) suddenly frosts and rumbles violently!</span><span class='regexp_end'>/</span></span><span class='comma'>,</span>
+    <span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>The ground beneath (?&lt;target&gt;.+?) boils with renewed vigor!</span><span class='regexp_end'>/</span></span><span class='comma'>,</span>
+    <span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>The ground beneath (?&lt;target&gt;.+?) rumbles with renewed vigor!</span><span class='regexp_end'>/</span></span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span><span class='comma'>,</span> <span class='lbracket'>[</span><span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>The ground beneath (?&lt;target&gt;.+?) suddenly calms\.</span><span class='regexp_end'>/</span></span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span><span class='rparen'>)</span><span class='comma'>,</span>
+  <span class='const'><span class='object_link'><a href="Parser/SequenceDef.html" title="CombatTracker::Parser::SequenceDef (class)">SequenceDef</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='symbol'>:flurry</span><span class='comma'>,</span> <span class='lbracket'>[</span><span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>You rotate your wrist, your .+? executing a casual spin to establish your flow as you advance upon (?&lt;target&gt;.+?)!</span><span class='regexp_end'>/</span></span><span class='comma'>,</span>
+    <span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>You rotate your wrists, your .+? and .+? executing a casual spin to establish your flow as you advance upon (?&lt;target&gt;[^!]+)!</span><span class='regexp_end'>/</span></span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span><span class='comma'>,</span> <span class='lbracket'>[</span>
+    <span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>The mesmerizing sway of body and blade glides to its inevitable end with one final twirl of your .+?\.</span><span class='regexp_end'>/</span></span><span class='comma'>,</span>
+    <span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>Distracted, you hesitate, and your assault is broken.  You give your blades a quick, sweeping flick of annoyance as you lower them\.</span><span class='regexp_end'>/</span></span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span><span class='rparen'>)</span>
 <span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span></pre></dd>
       
         <dt id="FLARE_DEFS-constant" class="">FLARE_DEFS =
@@ -174,7 +198,7 @@
   <span class='const'><span class='object_link'><a href="Parser/FlareDef.html" title="CombatTracker::Parser::FlareDef (class)">FlareDef</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='symbol'>:air</span><span class='comma'>,</span> <span class='lbracket'>[</span><span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>\*\* Your .+? unleashes a blast of air! \*\*</span><span class='regexp_end'>/</span></span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span><span class='comma'>,</span> <span class='kw'>true</span><span class='rparen'>)</span><span class='comma'>,</span>
   <span class='const'><span class='object_link'><a href="Parser/FlareDef.html" title="CombatTracker::Parser::FlareDef (class)">FlareDef</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='symbol'>:air_flourish</span><span class='comma'>,</span> <span class='lbracket'>[</span><span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>\*\* A fierce whirlwind erupts around .+?, encircling (?&lt;target&gt;.+?) in a suffocating cyclone! \*\*</span><span class='regexp_end'>/</span></span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span><span class='comma'>,</span> <span class='kw'>true</span><span class='rparen'>)</span><span class='comma'>,</span>
   <span class='const'><span class='object_link'><a href="Parser/FlareDef.html" title="CombatTracker::Parser::FlareDef (class)">FlareDef</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='symbol'>:arcane_reflex</span><span class='comma'>,</span> <span class='lbracket'>[</span><span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>Vital energy infuses you, hastening your arcane reflexes!</span><span class='regexp_end'>/</span></span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span><span class='comma'>,</span> <span class='kw'>false</span><span class='rparen'>)</span><span class='comma'>,</span>
-  <span class='const'><span class='object_link'><a href="Parser/FlareDef.html" title="CombatTracker::Parser::FlareDef (class)">FlareDef</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='symbol'>:blink</span><span class='comma'>,</span> <span class='lbracket'>[</span><span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>Your .+? suddenly lights up with hundreds of tiny blue sparks!</span><span class='regexp_end'>/</span></span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span><span class='comma'>,</span> <span class='kw'>false</span><span class='rparen'>)</span><span class='comma'>,</span>
+  <span class='const'><span class='object_link'><a href="Parser/FlareDef.html" title="CombatTracker::Parser::FlareDef (class)">FlareDef</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='symbol'>:blink</span><span class='comma'>,</span> <span class='lbracket'>[</span><span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>Your .+? suddenly lights up with hundreds of tiny blue sparks!</span><span class='regexp_end'>/</span></span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span><span class='comma'>,</span> <span class='kw'>true</span><span class='comma'>,</span> <span class='kw'>false</span><span class='rparen'>)</span><span class='comma'>,</span>
   <span class='const'><span class='object_link'><a href="Parser/FlareDef.html" title="CombatTracker::Parser::FlareDef (class)">FlareDef</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='symbol'>:blessings_flourish</span><span class='comma'>,</span> <span class='lbracket'>[</span>
     <span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>\*\* A crackling wave arcs across your body, striking (?&lt;target&gt;.+?) with lightning speed!  A spiritual resonance warms your core, lending you renewed strength! \*\*</span><span class='regexp_end'>/</span></span><span class='comma'>,</span>
     <span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>\*\* Shimmering arcs of lightning stream from your hands, colliding with (?&lt;target&gt;.+?) in a rapid burst!  A stirring force ignites within you, augmenting your spirit! \*\*</span><span class='regexp_end'>/</span></span><span class='comma'>,</span>
@@ -210,6 +234,7 @@
   <span class='const'><span class='object_link'><a href="Parser/FlareDef.html" title="CombatTracker::Parser::FlareDef (class)">FlareDef</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='symbol'>:ghezyte</span><span class='comma'>,</span> <span class='lbracket'>[</span><span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>\*\* Cords of plasma-veined grey mist seep from your .+? and entangle (?&lt;target&gt;[^,]+), causing .+? to tremble violently! \*\*</span><span class='regexp_end'>/</span></span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span><span class='comma'>,</span> <span class='kw'>false</span><span class='rparen'>)</span><span class='comma'>,</span>
   <span class='const'><span class='object_link'><a href="Parser/FlareDef.html" title="CombatTracker::Parser::FlareDef (class)">FlareDef</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='symbol'>:grapple</span><span class='comma'>,</span> <span class='lbracket'>[</span><span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>\*\* Your .+? releases a twisted tendril of force! \*\*</span><span class='regexp_end'>/</span></span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span><span class='comma'>,</span> <span class='kw'>true</span><span class='rparen'>)</span><span class='comma'>,</span>
   <span class='const'><span class='object_link'><a href="Parser/FlareDef.html" title="CombatTracker::Parser::FlareDef (class)">FlareDef</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='symbol'>:guiding_light</span><span class='comma'>,</span> <span class='lbracket'>[</span><span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>\*\* Your .+? sprays with a burst of plasma energy! \*\*</span><span class='regexp_end'>/</span></span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span><span class='comma'>,</span> <span class='kw'>true</span><span class='rparen'>)</span><span class='comma'>,</span>
+  <span class='const'><span class='object_link'><a href="Parser/FlareDef.html" title="CombatTracker::Parser::FlareDef (class)">FlareDef</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='symbol'>:holy_water</span><span class='comma'>,</span> <span class='lbracket'>[</span><span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>\*\* Your .+? sprays forth a shower of pure water! \*\*</span><span class='regexp_end'>/</span></span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span><span class='comma'>,</span> <span class='kw'>true</span><span class='comma'>,</span> <span class='kw'>false</span><span class='rparen'>)</span><span class='comma'>,</span>
   <span class='const'><span class='object_link'><a href="Parser/FlareDef.html" title="CombatTracker::Parser::FlareDef (class)">FlareDef</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='symbol'>:impact</span><span class='comma'>,</span> <span class='lbracket'>[</span><span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>\*\* Your .+? release a blast of vibrating energy at the (?&lt;target&gt;[^!]+)! \*\*</span><span class='regexp_end'>/</span></span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span><span class='comma'>,</span> <span class='kw'>true</span><span class='rparen'>)</span><span class='comma'>,</span>
   <span class='const'><span class='object_link'><a href="Parser/FlareDef.html" title="CombatTracker::Parser::FlareDef (class)">FlareDef</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='symbol'>:lightning</span><span class='comma'>,</span> <span class='lbracket'>[</span><span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>\*\* Your .+? emits a searing bolt of lightning! \*\*</span><span class='regexp_end'>/</span></span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span><span class='comma'>,</span> <span class='kw'>true</span><span class='rparen'>)</span><span class='comma'>,</span>
   <span class='const'><span class='object_link'><a href="Parser/FlareDef.html" title="CombatTracker::Parser::FlareDef (class)">FlareDef</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='symbol'>:lightning_gef</span><span class='comma'>,</span> <span class='lbracket'>[</span><span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>\*\* A vicious torrent of crackling lightning surges from .+? and strikes (?&lt;target&gt;[^!]+)! \*\*</span><span class='regexp_end'>/</span></span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span><span class='comma'>,</span> <span class='kw'>true</span><span class='rparen'>)</span><span class='comma'>,</span>
@@ -228,6 +253,9 @@
   <span class='const'><span class='object_link'><a href="Parser/FlareDef.html" title="CombatTracker::Parser::FlareDef (class)">FlareDef</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='symbol'>:psychic_assault</span><span class='comma'>,</span> <span class='lbracket'>[</span><span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>\*\* Your .+? unleashes a blast of psychic energy at the (?&lt;target&gt;[^!]+)! \*\*</span><span class='regexp_end'>/</span></span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span><span class='comma'>,</span> <span class='kw'>true</span><span class='rparen'>)</span><span class='comma'>,</span>
   <span class='const'><span class='object_link'><a href="Parser/FlareDef.html" title="CombatTracker::Parser::FlareDef (class)">FlareDef</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='symbol'>:religion_flourish</span><span class='comma'>,</span> <span class='lbracket'>[</span><span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>\*\* Divine flames kindle around .+?, leaping forth to engulf (?&lt;target&gt;.+?) in a sacred inferno! \*\*</span><span class='regexp_end'>/</span></span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span><span class='comma'>,</span> <span class='kw'>true</span><span class='rparen'>)</span><span class='comma'>,</span>
   <span class='const'><span class='object_link'><a href="Parser/FlareDef.html" title="CombatTracker::Parser::FlareDef (class)">FlareDef</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='symbol'>:rusalkan</span><span class='comma'>,</span> <span class='lbracket'>[</span><span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>Succumbing to the force of the tidal wave, (?&lt;target&gt;.+?) is thrown to the ground\.</span><span class='regexp_end'>/</span></span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span><span class='comma'>,</span> <span class='kw'>false</span><span class='rparen'>)</span><span class='comma'>,</span>
+  <span class='const'><span class='object_link'><a href="Parser/FlareDef.html" title="CombatTracker::Parser::FlareDef (class)">FlareDef</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='symbol'>:sigil_dispel</span><span class='comma'>,</span> <span class='lbracket'>[</span><span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>\*\* Tendrils of .+? lash out from your .+? toward (?&lt;target&gt;.+?) and cage .+? within bands of concentric geometry that constrict as one, shattering upon impact! \*\*</span><span class='regexp_end'>/</span></span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span><span class='comma'>,</span> <span class='kw'>true</span><span class='comma'>,</span> <span class='kw'>false</span><span class='rparen'>)</span><span class='comma'>,</span>
+  <span class='const'><span class='object_link'><a href="Parser/FlareDef.html" title="CombatTracker::Parser::FlareDef (class)">FlareDef</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='symbol'>:sigil_cast</span><span class='comma'>,</span> <span class='lbracket'>[</span><span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>\*\* Numerous sigils along your .+? abruptly flare to brilliance!  .+? surges from each, twining into an echo of your last spell\.\.\. \*\*</span><span class='regexp_end'>/</span></span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span><span class='comma'>,</span> <span class='kw'>true</span><span class='comma'>,</span> <span class='kw'>false</span><span class='rparen'>)</span><span class='comma'>,</span>
+  <span class='const'><span class='object_link'><a href="Parser/FlareDef.html" title="CombatTracker::Parser::FlareDef (class)">FlareDef</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='symbol'>:slashing_strikes</span><span class='comma'>,</span> <span class='lbracket'>[</span><span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>\*\* Your .+? finds its mark, slicing deep into (?&lt;target&gt;.+?)&lt;popBold\/&gt; (?&lt;location&gt;.+?)! \*\*</span><span class='regexp_end'>/</span></span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span><span class='comma'>,</span> <span class='kw'>true</span><span class='rparen'>)</span><span class='comma'>,</span>
   <span class='const'><span class='object_link'><a href="Parser/FlareDef.html" title="CombatTracker::Parser::FlareDef (class)">FlareDef</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='symbol'>:somnis</span><span class='comma'>,</span> <span class='lbracket'>[</span><span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>\*\* For a split second, the striations of your .+? expand into a sinuous pearlescent mist that rushes towards the (?&lt;target&gt;[^,]+), enveloping .+? entirely and causing .+? to collapse, fast asleep! \*\*</span><span class='regexp_end'>/</span></span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span><span class='comma'>,</span> <span class='kw'>false</span><span class='rparen'>)</span><span class='comma'>,</span>
   <span class='const'><span class='object_link'><a href="Parser/FlareDef.html" title="CombatTracker::Parser::FlareDef (class)">FlareDef</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='symbol'>:sprite</span><span class='comma'>,</span> <span class='lbracket'>[</span><span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>\*\* The .+? sprite on your shoulder sends forth a cylindrical, .+? blast of magic at (?&lt;target&gt;.+?\&lt;\/a\&gt;) .+?! \*\*</span><span class='regexp_end'>/</span></span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span><span class='comma'>,</span> <span class='kw'>true</span><span class='rparen'>)</span><span class='comma'>,</span>
   <span class='const'><span class='object_link'><a href="Parser/FlareDef.html" title="CombatTracker::Parser::FlareDef (class)">FlareDef</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='symbol'>:steam</span><span class='comma'>,</span> <span class='lbracket'>[</span>
@@ -268,6 +296,7 @@
     <span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>Unable to focus clearly, (?&lt;target&gt;.+?) blindly evades the .+?!</span><span class='regexp_end'>/</span></span><span class='comma'>,</span>
     <span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>(?&lt;target&gt;.+?) barely dodges the .+?!</span><span class='regexp_end'>/</span></span><span class='comma'>,</span>
     <span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>(?&lt;target&gt;.+?) dodges just in the nick of time!</span><span class='regexp_end'>/</span></span><span class='comma'>,</span>
+    <span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>(?&lt;target&gt;.+?) dodges out of the way!</span><span class='regexp_end'>/</span></span><span class='comma'>,</span>
     <span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>(?&lt;target&gt;.+?) evades the .+? by a hair!</span><span class='regexp_end'>/</span></span><span class='comma'>,</span>
     <span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>(?&lt;target&gt;.+?) evades the .+? by inches!</span><span class='regexp_end'>/</span></span><span class='comma'>,</span>
     <span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>(?&lt;target&gt;.+?) evades the .+? with ease!</span><span class='regexp_end'>/</span></span><span class='comma'>,</span>
@@ -328,29 +357,31 @@
         <dd><pre class="code"><span class='lbracket'>[</span>
   <span class='const'><span class='object_link'><a href="Parser/ResolutionDef.html" title="CombatTracker::Parser::ResolutionDef (class)">ResolutionDef</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='symbol'>:as_ds</span><span class='comma'>,</span> <span class='lbracket'>[</span><span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>AS: (?&lt;AS&gt;[\+\-\d]+) vs DS: (?&lt;DS&gt;[\+\-\d]+) with AvD: (?&lt;AvD&gt;[\+\-\d]+) \+ d\d+ roll: (?&lt;roll&gt;[\+\-\d]+) \= (?&lt;result&gt;[\+\-\d]+)</span><span class='regexp_end'>/</span></span><span class='rbracket'>]</span><span class='rparen'>)</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span><span class='comma'>,</span>
   <span class='const'><span class='object_link'><a href="Parser/ResolutionDef.html" title="CombatTracker::Parser::ResolutionDef (class)">ResolutionDef</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='symbol'>:cs_td</span><span class='comma'>,</span> <span class='lbracket'>[</span>
-                      <span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>CS: (?&lt;CS&gt;[\+\-\d]+) \- TD: (?&lt;TD&gt;[\+\-\d]+) \+ CvA: (?&lt;CvA&gt;[\+\-\d]+) \+ d\d+\: (?&lt;roll&gt;[\+\-\d]+) \=\= (?&lt;result&gt;[\+\-\d]+)</span><span class='regexp_end'>/</span></span><span class='comma'>,</span>
-                      <span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>CS: (?&lt;CS&gt;[\+\-\d]+) \- TD: (?&lt;TD&gt;[\+\-\d]+) \+ CvA: (?&lt;CvA&gt;[\+\-\d]+) \+ d\d+\: (?&lt;roll&gt;[\+\-\d]+) \+ Bonus: (?&lt;bonus&gt;[\+\-\d]+) \=\= (?&lt;result&gt;[\+\-\d]+)</span><span class='regexp_end'>/</span></span>
-                    <span class='rbracket'>]</span><span class='rparen'>)</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span><span class='comma'>,</span>
+    <span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>CS: (?&lt;CS&gt;[\+\-\d]+) \- TD: (?&lt;TD&gt;[\+\-\d]+) \+ CvA: (?&lt;CvA&gt;[\+\-\d]+) \+ d\d+\: (?&lt;roll&gt;[\+\-\d]+) \=\= (?&lt;result&gt;[\+\-\d]+)</span><span class='regexp_end'>/</span></span><span class='comma'>,</span>
+    <span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>CS: (?&lt;CS&gt;[\+\-\d]+) \- TD: (?&lt;TD&gt;[\+\-\d]+) \+ CvA: (?&lt;CvA&gt;[\+\-\d]+) \+ d\d+\: (?&lt;roll&gt;[\+\-\d]+) \+ Bonus: (?&lt;bonus&gt;[\+\-\d]+) \=\= (?&lt;result&gt;[\+\-\d]+)</span><span class='regexp_end'>/</span></span>
+  <span class='rbracket'>]</span><span class='rparen'>)</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span><span class='comma'>,</span>
   <span class='const'><span class='object_link'><a href="Parser/ResolutionDef.html" title="CombatTracker::Parser::ResolutionDef (class)">ResolutionDef</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='symbol'>:smr</span><span class='comma'>,</span> <span class='lbracket'>[</span>
-                      <span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>\[SMR Result: (?&lt;result&gt;\d+) \(Open d100: (?&lt;roll&gt;[\+\-\d]+), Bonus: (?&lt;bonus&gt;[\-\+\d]+)\)\]</span><span class='regexp_end'>/</span></span><span class='comma'>,</span>
-                      <span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>\[SMR Result: (?&lt;result&gt;\d+) \(Open d100: (?&lt;roll&gt;[\+\-\d]+)\)\]</span><span class='regexp_end'>/</span></span>
-                    <span class='rbracket'>]</span><span class='rparen'>)</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span>
+    <span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>\[SMR result: (?&lt;result&gt;\d+) \(Open d100: (?&lt;roll&gt;[\+\-\d]+), Bonus: (?&lt;bonus&gt;[\-\+\d]+)\)\]</span><span class='regexp_end'>/</span></span><span class='comma'>,</span>
+    <span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>\[SMR result: (?&lt;result&gt;\d+) \(Open d100: (?&lt;roll&gt;[\+\-\d]+)\)\]</span><span class='regexp_end'>/</span></span>
+  <span class='rbracket'>]</span><span class='rparen'>)</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span>
 <span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span></pre></dd>
       
         <dt id="STATUS_DEFS-constant" class="">STATUS_DEFS =
           
         </dt>
         <dd><pre class="code"><span class='lbracket'>[</span>
-  <span class='const'><span class='object_link'><a href="Parser/StatusDef.html" title="CombatTracker::Parser::StatusDef (class)">StatusDef</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='symbol'>:stunned</span><span class='comma'>,</span> <span class='lbracket'>[</span><span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>The (?&lt;target&gt;.+?) is stunned!</span><span class='regexp_end'>/</span></span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span><span class='rparen'>)</span><span class='comma'>,</span>
+  <span class='const'><span class='object_link'><a href="Parser/StatusDef.html" title="CombatTracker::Parser::StatusDef (class)">StatusDef</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='symbol'>:blind</span><span class='comma'>,</span> <span class='lbracket'>[</span><span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>You blinded (?&lt;target&gt;[^!]+)!</span><span class='regexp_end'>/</span></span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span><span class='rparen'>)</span><span class='comma'>,</span>
+  <span class='const'><span class='object_link'><a href="Parser/StatusDef.html" title="CombatTracker::Parser::StatusDef (class)">StatusDef</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='symbol'>:immobilized</span><span class='comma'>,</span> <span class='lbracket'>[</span><span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>(?&lt;target&gt;.+?) form is entangled in an unseen force that restricts .+? movement\.</span><span class='regexp_end'>/</span></span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span><span class='rparen'>)</span><span class='comma'>,</span>
   <span class='const'><span class='object_link'><a href="Parser/StatusDef.html" title="CombatTracker::Parser::StatusDef (class)">StatusDef</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='symbol'>:prone</span><span class='comma'>,</span> <span class='lbracket'>[</span>
     <span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>It is knocked to the ground!</span><span class='regexp_end'>/</span></span><span class='comma'>,</span>
     <span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>(?&lt;target&gt;.+?) is knocked to the ground!</span><span class='regexp_end'>/</span></span>
   <span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span><span class='rparen'>)</span><span class='comma'>,</span>
-  <span class='const'><span class='object_link'><a href="Parser/StatusDef.html" title="CombatTracker::Parser::StatusDef (class)">StatusDef</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='symbol'>:immobilized</span><span class='comma'>,</span> <span class='lbracket'>[</span><span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>(?&lt;target&gt;.+?) form is entangled in an unseen force that restricts .+? movement\.</span><span class='regexp_end'>/</span></span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span><span class='rparen'>)</span><span class='comma'>,</span>
-  <span class='const'><span class='object_link'><a href="Parser/StatusDef.html" title="CombatTracker::Parser::StatusDef (class)">StatusDef</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='symbol'>:blind</span><span class='comma'>,</span> <span class='lbracket'>[</span><span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>You blinded (?&lt;target&gt;[^!]+)!</span><span class='regexp_end'>/</span></span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span><span class='rparen'>)</span>
+  <span class='const'><span class='object_link'><a href="Parser/StatusDef.html" title="CombatTracker::Parser::StatusDef (class)">StatusDef</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='symbol'>:stunned</span><span class='comma'>,</span> <span class='lbracket'>[</span><span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>The (?&lt;target&gt;.+?) is stunned!</span><span class='regexp_end'>/</span></span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span><span class='rparen'>)</span><span class='comma'>,</span>
+  <span class='const'><span class='object_link'><a href="Parser/StatusDef.html" title="CombatTracker::Parser::StatusDef (class)">StatusDef</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='symbol'>:sunburst</span><span class='comma'>,</span> <span class='lbracket'>[</span><span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>(?&lt;target&gt;.+?) reels and stumbles under the intense flare!</span><span class='regexp_end'>/</span></span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span><span class='rparen'>)</span><span class='comma'>,</span>
+  <span class='const'><span class='object_link'><a href="Parser/StatusDef.html" title="CombatTracker::Parser::StatusDef (class)">StatusDef</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='symbol'>:webbed</span><span class='comma'>,</span> <span class='lbracket'>[</span><span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>(?&lt;target&gt;.+?) becomes ensnared in thick strands of webbing!</span><span class='regexp_end'>/</span></span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span><span class='rparen'>)</span>
 <span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span></pre></dd>
       
-        <dt id="ATTACK_LOOKUP-constant" class="">ATTACK_LOOKUP =
+        <dt id="SEQUENCE_START_LOOKUP-constant" class="">SEQUENCE_START_LOOKUP =
           <div class="docstring">
   <div class="discussion">
     
@@ -364,12 +395,22 @@
 
 </div>
         </dt>
-        <dd><pre class="code"><span class='const'><span class='object_link'><a href="#ATTACK_DEFS-constant" title="CombatTracker::Parser::ATTACK_DEFS (constant)">ATTACK_DEFS</a></span></span><span class='period'>.</span><span class='id identifier rubyid_flat_map'>flat_map</span>     <span class='lbrace'>{</span> <span class='op'>|</span><span class='id identifier rubyid_d'>d</span><span class='op'>|</span> <span class='id identifier rubyid_d'>d</span><span class='period'>.</span><span class='id identifier rubyid_patterns'>patterns</span><span class='period'>.</span><span class='id identifier rubyid_map'>map</span> <span class='lbrace'>{</span> <span class='op'>|</span><span class='id identifier rubyid_rx'>rx</span><span class='op'>|</span> <span class='lbracket'>[</span><span class='id identifier rubyid_rx'>rx</span><span class='comma'>,</span> <span class='id identifier rubyid_d'>d</span><span class='period'>.</span><span class='id identifier rubyid_name'>name</span><span class='rbracket'>]</span> <span class='rbrace'>}</span> <span class='rbrace'>}</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span></pre></dd>
+        <dd><pre class="code"><span class='const'><span class='object_link'><a href="#SEQUENCE_DEFS-constant" title="CombatTracker::Parser::SEQUENCE_DEFS (constant)">SEQUENCE_DEFS</a></span></span><span class='period'>.</span><span class='id identifier rubyid_flat_map'>flat_map</span>    <span class='lbrace'>{</span> <span class='op'>|</span><span class='id identifier rubyid_d'>d</span><span class='op'>|</span> <span class='id identifier rubyid_d'>d</span><span class='period'>.</span><span class='id identifier rubyid_start_patterns'>start_patterns</span><span class='period'>.</span><span class='id identifier rubyid_map'>map</span> <span class='lbrace'>{</span> <span class='op'>|</span><span class='id identifier rubyid_rx'>rx</span><span class='op'>|</span> <span class='lbracket'>[</span><span class='id identifier rubyid_rx'>rx</span><span class='comma'>,</span> <span class='id identifier rubyid_d'>d</span><span class='period'>.</span><span class='id identifier rubyid_name'>name</span><span class='comma'>,</span> <span class='rbracket'>]</span><span class='rbrace'>}</span><span class='rbrace'>}</span></pre></dd>
+      
+        <dt id="SEQUENCE_END_LOOKUP-constant" class="">SEQUENCE_END_LOOKUP =
+          
+        </dt>
+        <dd><pre class="code"><span class='const'><span class='object_link'><a href="#SEQUENCE_DEFS-constant" title="CombatTracker::Parser::SEQUENCE_DEFS (constant)">SEQUENCE_DEFS</a></span></span><span class='period'>.</span><span class='id identifier rubyid_flat_map'>flat_map</span>    <span class='lbrace'>{</span> <span class='op'>|</span><span class='id identifier rubyid_d'>d</span><span class='op'>|</span> <span class='id identifier rubyid_d'>d</span><span class='period'>.</span><span class='id identifier rubyid_end_patterns'>end_patterns</span><span class='period'>.</span><span class='id identifier rubyid_map'>map</span> <span class='lbrace'>{</span> <span class='op'>|</span><span class='id identifier rubyid_rx'>rx</span><span class='op'>|</span> <span class='lbracket'>[</span><span class='id identifier rubyid_rx'>rx</span><span class='comma'>,</span> <span class='id identifier rubyid_d'>d</span><span class='period'>.</span><span class='id identifier rubyid_name'>name</span><span class='rbracket'>]</span><span class='rbrace'>}</span><span class='rbrace'>}</span></pre></dd>
+      
+        <dt id="ATTACK_LOOKUP-constant" class="">ATTACK_LOOKUP =
+          
+        </dt>
+        <dd><pre class="code"><span class='const'><span class='object_link'><a href="#ATTACK_DEFS-constant" title="CombatTracker::Parser::ATTACK_DEFS (constant)">ATTACK_DEFS</a></span></span><span class='period'>.</span><span class='id identifier rubyid_flat_map'>flat_map</span>     <span class='lbrace'>{</span> <span class='op'>|</span><span class='id identifier rubyid_d'>d</span><span class='op'>|</span> <span class='id identifier rubyid_d'>d</span><span class='period'>.</span><span class='id identifier rubyid_patterns'>patterns</span><span class='period'>.</span><span class='id identifier rubyid_map'>map</span> <span class='lbrace'>{</span> <span class='op'>|</span><span class='id identifier rubyid_rx'>rx</span><span class='op'>|</span> <span class='lbracket'>[</span><span class='id identifier rubyid_rx'>rx</span><span class='comma'>,</span> <span class='id identifier rubyid_d'>d</span><span class='period'>.</span><span class='id identifier rubyid_name'>name</span><span class='comma'>,</span> <span class='id identifier rubyid_d'>d</span><span class='period'>.</span><span class='id identifier rubyid_damaging'>damaging</span><span class='comma'>,</span> <span class='id identifier rubyid_d'>d</span><span class='period'>.</span><span class='id identifier rubyid_spell'>spell</span><span class='comma'>,</span> <span class='id identifier rubyid_d'>d</span><span class='period'>.</span><span class='id identifier rubyid_aoe'>aoe</span><span class='rbracket'>]</span><span class='rbrace'>}</span> <span class='rbrace'>}</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span></pre></dd>
       
         <dt id="FLARE_LOOKUP-constant" class="">FLARE_LOOKUP =
           
         </dt>
-        <dd><pre class="code"><span class='const'><span class='object_link'><a href="#FLARE_DEFS-constant" title="CombatTracker::Parser::FLARE_DEFS (constant)">FLARE_DEFS</a></span></span><span class='period'>.</span><span class='id identifier rubyid_flat_map'>flat_map</span>      <span class='lbrace'>{</span> <span class='op'>|</span><span class='id identifier rubyid_d'>d</span><span class='op'>|</span> <span class='id identifier rubyid_d'>d</span><span class='period'>.</span><span class='id identifier rubyid_patterns'>patterns</span><span class='period'>.</span><span class='id identifier rubyid_map'>map</span> <span class='lbrace'>{</span> <span class='op'>|</span><span class='id identifier rubyid_rx'>rx</span><span class='op'>|</span> <span class='lbracket'>[</span><span class='id identifier rubyid_rx'>rx</span><span class='comma'>,</span> <span class='id identifier rubyid_d'>d</span><span class='period'>.</span><span class='id identifier rubyid_name'>name</span><span class='comma'>,</span> <span class='id identifier rubyid_d'>d</span><span class='period'>.</span><span class='id identifier rubyid_damaging'>damaging</span><span class='rbracket'>]</span> <span class='rbrace'>}</span> <span class='rbrace'>}</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span></pre></dd>
+        <dd><pre class="code"><span class='const'><span class='object_link'><a href="#FLARE_DEFS-constant" title="CombatTracker::Parser::FLARE_DEFS (constant)">FLARE_DEFS</a></span></span><span class='period'>.</span><span class='id identifier rubyid_flat_map'>flat_map</span>      <span class='lbrace'>{</span> <span class='op'>|</span><span class='id identifier rubyid_d'>d</span><span class='op'>|</span> <span class='id identifier rubyid_d'>d</span><span class='period'>.</span><span class='id identifier rubyid_patterns'>patterns</span><span class='period'>.</span><span class='id identifier rubyid_map'>map</span> <span class='lbrace'>{</span> <span class='op'>|</span><span class='id identifier rubyid_rx'>rx</span><span class='op'>|</span> <span class='lbracket'>[</span><span class='id identifier rubyid_rx'>rx</span><span class='comma'>,</span> <span class='id identifier rubyid_d'>d</span><span class='period'>.</span><span class='id identifier rubyid_name'>name</span><span class='comma'>,</span> <span class='id identifier rubyid_d'>d</span><span class='period'>.</span><span class='id identifier rubyid_damaging'>damaging</span><span class='comma'>,</span> <span class='id identifier rubyid_d'>d</span><span class='period'>.</span><span class='id identifier rubyid_aoe'>aoe</span><span class='rbracket'>]</span> <span class='rbrace'>}</span> <span class='rbrace'>}</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span></pre></dd>
       
         <dt id="RESOLUTION_LOOKUP-constant" class="">RESOLUTION_LOOKUP =
           
@@ -386,7 +427,7 @@
         </dt>
         <dd><pre class="code"><span class='const'><span class='object_link'><a href="#STATUS_DEFS-constant" title="CombatTracker::Parser::STATUS_DEFS (constant)">STATUS_DEFS</a></span></span><span class='period'>.</span><span class='id identifier rubyid_flat_map'>flat_map</span>     <span class='lbrace'>{</span> <span class='op'>|</span><span class='id identifier rubyid_d'>d</span><span class='op'>|</span> <span class='id identifier rubyid_d'>d</span><span class='period'>.</span><span class='id identifier rubyid_patterns'>patterns</span><span class='period'>.</span><span class='id identifier rubyid_map'>map</span> <span class='lbrace'>{</span> <span class='op'>|</span><span class='id identifier rubyid_rx'>rx</span><span class='op'>|</span> <span class='lbracket'>[</span><span class='id identifier rubyid_rx'>rx</span><span class='comma'>,</span> <span class='id identifier rubyid_d'>d</span><span class='period'>.</span><span class='id identifier rubyid_type'>type</span><span class='rbracket'>]</span> <span class='rbrace'>}</span> <span class='rbrace'>}</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span></pre></dd>
       
-        <dt id="ATTACK_DETECTOR-constant" class="">ATTACK_DETECTOR =
+        <dt id="SEQUENCE_START_DETECTOR-constant" class="">SEQUENCE_START_DETECTOR =
           <div class="docstring">
   <div class="discussion">
     
@@ -399,6 +440,16 @@
   
 
 </div>
+        </dt>
+        <dd><pre class="code"><span class='const'>Regexp</span><span class='period'>.</span><span class='id identifier rubyid_union'>union</span><span class='lparen'>(</span><span class='const'><span class='object_link'><a href="#SEQUENCE_START_LOOKUP-constant" title="CombatTracker::Parser::SEQUENCE_START_LOOKUP (constant)">SEQUENCE_START_LOOKUP</a></span></span><span class='period'>.</span><span class='id identifier rubyid_map'>map</span><span class='lparen'>(</span><span class='op'>&amp;</span><span class='symbol'>:first</span><span class='rparen'>)</span><span class='rparen'>)</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span></pre></dd>
+      
+        <dt id="SEQUENCE_END_DETECTOR-constant" class="">SEQUENCE_END_DETECTOR =
+          
+        </dt>
+        <dd><pre class="code"><span class='const'>Regexp</span><span class='period'>.</span><span class='id identifier rubyid_union'>union</span><span class='lparen'>(</span><span class='const'><span class='object_link'><a href="#SEQUENCE_END_LOOKUP-constant" title="CombatTracker::Parser::SEQUENCE_END_LOOKUP (constant)">SEQUENCE_END_LOOKUP</a></span></span><span class='period'>.</span><span class='id identifier rubyid_map'>map</span><span class='lparen'>(</span><span class='op'>&amp;</span><span class='symbol'>:first</span><span class='rparen'>)</span><span class='rparen'>)</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span></pre></dd>
+      
+        <dt id="ATTACK_DETECTOR-constant" class="">ATTACK_DETECTOR =
+          
         </dt>
         <dd><pre class="code"><span class='const'>Regexp</span><span class='period'>.</span><span class='id identifier rubyid_union'>union</span><span class='lparen'>(</span><span class='const'><span class='object_link'><a href="#ATTACK_LOOKUP-constant" title="CombatTracker::Parser::ATTACK_LOOKUP (constant)">ATTACK_LOOKUP</a></span></span><span class='period'>.</span><span class='id identifier rubyid_map'>map</span><span class='lparen'>(</span><span class='op'>&amp;</span><span class='symbol'>:first</span><span class='rparen'>)</span><span class='rparen'>)</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span></pre></dd>
       
@@ -609,6 +660,52 @@
         <li class="public ">
   <span class="summary_signature">
     
+      <a href="#parse_sequence_end-class_method" title="parse_sequence_end (class method)">.<strong>parse_sequence_end</strong>(line)  &#x21d2; Object </a>
+    
+
+    
+  </span>
+  
+  
+  
+  
+  
+  
+  
+
+  
+    <span class="summary_desc"><div class='inline'></div></span>
+  
+</li>
+
+      
+        <li class="public ">
+  <span class="summary_signature">
+    
+      <a href="#parse_sequence_start-class_method" title="parse_sequence_start (class method)">.<strong>parse_sequence_start</strong>(line)  &#x21d2; String<sup>?</sup> </a>
+    
+
+    
+  </span>
+  
+  
+  
+  
+  
+  
+  
+
+  
+    <span class="summary_desc"><div class='inline'>
+<p>Parses an assault line and extracts the assault type.</p>
+</div></span>
+  
+</li>
+
+      
+        <li class="public ">
+  <span class="summary_signature">
+    
       <a href="#parse_status-class_method" title="parse_status (class method)">.<strong>parse_status</strong>(line)  &#x21d2; String<sup>?</sup> </a>
     
 
@@ -712,13 +809,13 @@
       <pre class="lines">
 
 
-14
-15
-16
-17</pre>
+28
+29
+30
+31</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/combattracker_parser.rb', line 14</span>
+      <pre class="code"><span class="info file"># File 'combattracker_parser.rb', line 28</span>
 
 <span class='kw'>def</span> <span class='kw'>self</span><span class='period'>.</span><span class='id identifier rubyid_extract_link'>extract_link</span><span class='lparen'>(</span><span class='id identifier rubyid_text'>text</span><span class='rparen'>)</span>
   <span class='id identifier rubyid_m'>m</span> <span class='op'>=</span> <span class='const'><span class='object_link'><a href="#TARGET_LINK-constant" title="CombatTracker::Parser::TARGET_LINK (constant)">TARGET_LINK</a></span></span><span class='period'>.</span><span class='id identifier rubyid_match'>match</span><span class='lparen'>(</span><span class='id identifier rubyid_text'>text</span><span class='rparen'>)</span> <span class='kw'>or</span> <span class='kw'>return</span>
@@ -802,28 +899,28 @@
       <pre class="lines">
 
 
-279
-280
-281
-282
-283
-284
-285
-286
-287
-288
-289
-290
-291</pre>
+343
+344
+345
+346
+347
+348
+349
+350
+351
+352
+353
+354
+355</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/combattracker_parser.rb', line 279</span>
+      <pre class="code"><span class="info file"># File 'combattracker_parser.rb', line 343</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_parse_attack'>parse_attack</span><span class='lparen'>(</span><span class='id identifier rubyid_line'>line</span><span class='rparen'>)</span>
   <span class='kw'>return</span> <span class='kw'>unless</span> <span class='const'><span class='object_link'><a href="#ATTACK_DETECTOR-constant" title="CombatTracker::Parser::ATTACK_DETECTOR (constant)">ATTACK_DETECTOR</a></span></span><span class='period'>.</span><span class='id identifier rubyid_match?'>match?</span><span class='lparen'>(</span><span class='id identifier rubyid_line'>line</span><span class='rparen'>)</span>
-  <span class='const'><span class='object_link'><a href="#ATTACK_LOOKUP-constant" title="CombatTracker::Parser::ATTACK_LOOKUP (constant)">ATTACK_LOOKUP</a></span></span><span class='period'>.</span><span class='id identifier rubyid_each'>each</span> <span class='kw'>do</span> <span class='op'>|</span><span class='id identifier rubyid_rx'>rx</span><span class='comma'>,</span> <span class='id identifier rubyid_name'>name</span><span class='op'>|</span>
+  <span class='const'><span class='object_link'><a href="#ATTACK_LOOKUP-constant" title="CombatTracker::Parser::ATTACK_LOOKUP (constant)">ATTACK_LOOKUP</a></span></span><span class='period'>.</span><span class='id identifier rubyid_each'>each</span> <span class='kw'>do</span> <span class='op'>|</span><span class='id identifier rubyid_rx'>rx</span><span class='comma'>,</span> <span class='id identifier rubyid_name'>name</span><span class='comma'>,</span> <span class='id identifier rubyid_damaging'>damaging</span><span class='comma'>,</span> <span class='id identifier rubyid_spell'>spell</span><span class='comma'>,</span> <span class='id identifier rubyid_aoe'>aoe</span><span class='op'>|</span>
     <span class='kw'>if</span> <span class='lparen'>(</span><span class='id identifier rubyid_m'>m</span> <span class='op'>=</span> <span class='id identifier rubyid_rx'>rx</span><span class='period'>.</span><span class='id identifier rubyid_match'>match</span><span class='lparen'>(</span><span class='id identifier rubyid_line'>line</span><span class='rparen'>)</span><span class='rparen'>)</span>
-      <span class='id identifier rubyid_info'>info</span> <span class='op'>=</span> <span class='lbrace'>{</span> <span class='label'>name:</span> <span class='id identifier rubyid_name'>name</span><span class='comma'>,</span> <span class='label'>raw:</span> <span class='id identifier rubyid_line'>line</span><span class='period'>.</span><span class='id identifier rubyid_strip'>strip</span> <span class='rbrace'>}</span>
+      <span class='id identifier rubyid_info'>info</span> <span class='op'>=</span> <span class='lbrace'>{</span> <span class='label'>name:</span> <span class='id identifier rubyid_name'>name</span><span class='comma'>,</span> <span class='label'>damaging:</span> <span class='id identifier rubyid_damaging'>damaging</span><span class='comma'>,</span> <span class='label'>spell:</span> <span class='id identifier rubyid_spell'>spell</span><span class='comma'>,</span> <span class='label'>aoe:</span> <span class='id identifier rubyid_aoe'>aoe</span><span class='comma'>,</span>  <span class='label'>raw:</span> <span class='id identifier rubyid_line'>line</span><span class='period'>.</span><span class='id identifier rubyid_strip'>strip</span> <span class='rbrace'>}</span>
       <span class='kw'>if</span> <span class='id identifier rubyid_m'>m</span><span class='period'>.</span><span class='id identifier rubyid_names'>names</span><span class='period'>.</span><span class='id identifier rubyid_include?'>include?</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&#39;</span><span class='tstring_content'>target</span><span class='tstring_end'>&#39;</span></span><span class='rparen'>)</span>
         <span class='id identifier rubyid_raw_t'>raw_t</span> <span class='op'>=</span> <span class='id identifier rubyid_m'>m</span><span class='lbracket'>[</span><span class='symbol'>:target</span><span class='rbracket'>]</span>
         <span class='id identifier rubyid_info'>info</span><span class='lbracket'>[</span><span class='symbol'>:target</span><span class='rbracket'>]</span> <span class='op'>=</span> <span class='id identifier rubyid_extract_link'>extract_link</span><span class='lparen'>(</span><span class='id identifier rubyid_raw_t'>raw_t</span><span class='rparen'>)</span> <span class='op'>||</span> <span class='lbrace'>{</span> <span class='label'>id:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>noun:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>name:</span> <span class='id identifier rubyid_raw_t'>raw_t</span> <span class='rbrace'>}</span>
@@ -910,21 +1007,21 @@
       <pre class="lines">
 
 
-300
-301
-302
-303
-304
-305
-306
-307
-308
-309
-310
-311</pre>
+364
+365
+366
+367
+368
+369
+370
+371
+372
+373
+374
+375</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/combattracker_parser.rb', line 300</span>
+      <pre class="code"><span class="info file"># File 'combattracker_parser.rb', line 364</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_parse_flare'>parse_flare</span><span class='lparen'>(</span><span class='id identifier rubyid_line'>line</span><span class='rparen'>)</span>
   <span class='kw'>return</span> <span class='kw'>unless</span> <span class='const'><span class='object_link'><a href="#FLARE_DETECTOR-constant" title="CombatTracker::Parser::FLARE_DETECTOR (constant)">FLARE_DETECTOR</a></span></span><span class='period'>.</span><span class='id identifier rubyid_match?'>match?</span><span class='lparen'>(</span><span class='id identifier rubyid_line'>line</span><span class='rparen'>)</span>
@@ -1016,13 +1113,13 @@
       <pre class="lines">
 
 
-320
-321
-322
-323</pre>
+384
+385
+386
+387</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/combattracker_parser.rb', line 320</span>
+      <pre class="code"><span class="info file"># File 'combattracker_parser.rb', line 384</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_parse_lodged'>parse_lodged</span><span class='lparen'>(</span><span class='id identifier rubyid_line'>line</span><span class='rparen'>)</span>
   <span class='const'><span class='object_link'><a href="#LODGED_DEFS-constant" title="CombatTracker::Parser::LODGED_DEFS (constant)">LODGED_DEFS</a></span></span><span class='period'>.</span><span class='id identifier rubyid_match'>match</span><span class='lparen'>(</span><span class='id identifier rubyid_line'>line</span><span class='rparen'>)</span>
@@ -1106,13 +1203,13 @@
       <pre class="lines">
 
 
-346
-347
-348
-349</pre>
+410
+411
+412
+413</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/combattracker_parser.rb', line 346</span>
+      <pre class="code"><span class="info file"># File 'combattracker_parser.rb', line 410</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_parse_outcome'>parse_outcome</span><span class='lparen'>(</span><span class='id identifier rubyid_line'>line</span><span class='rparen'>)</span>
   <span class='kw'>return</span> <span class='kw'>unless</span> <span class='const'><span class='object_link'><a href="#OUTCOME_DETECTOR-constant" title="CombatTracker::Parser::OUTCOME_DETECTOR (constant)">OUTCOME_DETECTOR</a></span></span><span class='period'>.</span><span class='id identifier rubyid_match?'>match?</span><span class='lparen'>(</span><span class='id identifier rubyid_line'>line</span><span class='rparen'>)</span>
@@ -1196,21 +1293,143 @@
       <pre class="lines">
 
 
-332
-333
-334
-335
-336
-337</pre>
+396
+397
+398
+399
+400
+401</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/combattracker_parser.rb', line 332</span>
+      <pre class="code"><span class="info file"># File 'combattracker_parser.rb', line 396</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_parse_resolution'>parse_resolution</span><span class='lparen'>(</span><span class='id identifier rubyid_line'>line</span><span class='rparen'>)</span>
   <span class='kw'>return</span> <span class='kw'>unless</span> <span class='const'><span class='object_link'><a href="#RESOLUTION_DETECTOR-constant" title="CombatTracker::Parser::RESOLUTION_DETECTOR (constant)">RESOLUTION_DETECTOR</a></span></span><span class='period'>.</span><span class='id identifier rubyid_match?'>match?</span><span class='lparen'>(</span><span class='id identifier rubyid_line'>line</span><span class='rparen'>)</span>
   <span class='const'><span class='object_link'><a href="#RESOLUTION_LOOKUP-constant" title="CombatTracker::Parser::RESOLUTION_LOOKUP (constant)">RESOLUTION_LOOKUP</a></span></span><span class='period'>.</span><span class='id identifier rubyid_each'>each</span> <span class='kw'>do</span> <span class='op'>|</span><span class='id identifier rubyid_rx'>rx</span><span class='comma'>,</span> <span class='id identifier rubyid_type'>type</span><span class='op'>|</span>
     <span class='kw'>return</span> <span class='lbrace'>{</span> <span class='label'>type:</span><span class='comma'>,</span> <span class='label'>data:</span> <span class='id identifier rubyid_rx'>rx</span><span class='period'>.</span><span class='id identifier rubyid_match'>match</span><span class='lparen'>(</span><span class='id identifier rubyid_line'>line</span><span class='rparen'>)</span><span class='period'>.</span><span class='id identifier rubyid_named_captures'>named_captures</span><span class='period'>.</span><span class='id identifier rubyid_transform_keys'>transform_keys</span><span class='lparen'>(</span><span class='op'>&amp;</span><span class='symbol'>:to_sym</span><span class='rparen'>)</span> <span class='rbrace'>}</span> <span class='kw'>if</span> <span class='id identifier rubyid_rx'>rx</span><span class='period'>.</span><span class='id identifier rubyid_match?'>match?</span><span class='lparen'>(</span><span class='id identifier rubyid_line'>line</span><span class='rparen'>)</span>
   <span class='kw'>end</span>
+<span class='kw'>end</span></pre>
+    </td>
+  </tr>
+</table>
+</div>
+    
+      <div class="method_details ">
+  <h3 class="signature " id="parse_sequence_end-class_method">
+  
+    .<strong>parse_sequence_end</strong>(line)  &#x21d2; <tt>Object</tt> 
+  
+
+  
+
+  
+</h3><table class="source_code">
+  <tr>
+    <td>
+      <pre class="lines">
+
+
+331
+332
+333
+334</pre>
+    </td>
+    <td>
+      <pre class="code"><span class="info file"># File 'combattracker_parser.rb', line 331</span>
+
+<span class='kw'>def</span> <span class='id identifier rubyid_parse_sequence_end'>parse_sequence_end</span><span class='lparen'>(</span><span class='id identifier rubyid_line'>line</span><span class='rparen'>)</span>
+  <span class='kw'>return</span> <span class='kw'>unless</span> <span class='const'><span class='object_link'><a href="#SEQUENCE_END_DETECTOR-constant" title="CombatTracker::Parser::SEQUENCE_END_DETECTOR (constant)">SEQUENCE_END_DETECTOR</a></span></span><span class='period'>.</span><span class='id identifier rubyid_match?'>match?</span><span class='lparen'>(</span><span class='id identifier rubyid_line'>line</span><span class='rparen'>)</span>
+  <span class='const'><span class='object_link'><a href="#SEQUENCE_END_LOOKUP-constant" title="CombatTracker::Parser::SEQUENCE_END_LOOKUP (constant)">SEQUENCE_END_LOOKUP</a></span></span><span class='period'>.</span><span class='id identifier rubyid_each'>each</span> <span class='lbrace'>{</span> <span class='op'>|</span><span class='id identifier rubyid_rx'>rx</span><span class='comma'>,</span> <span class='id identifier rubyid_type'>type</span><span class='op'>|</span> <span class='kw'>return</span> <span class='id identifier rubyid_type'>type</span> <span class='kw'>if</span> <span class='id identifier rubyid_rx'>rx</span><span class='period'>.</span><span class='id identifier rubyid_match?'>match?</span><span class='lparen'>(</span><span class='id identifier rubyid_line'>line</span><span class='rparen'>)</span> <span class='rbrace'>}</span>
+<span class='kw'>end</span></pre>
+    </td>
+  </tr>
+</table>
+</div>
+    
+      <div class="method_details ">
+  <h3 class="signature " id="parse_sequence_start-class_method">
+  
+    .<strong>parse_sequence_start</strong>(line)  &#x21d2; <tt>String</tt><sup>?</sup> 
+  
+
+  
+
+  
+</h3><div class="docstring">
+  <div class="discussion">
+    
+<p>Parses an assault line and extracts the assault type.</p>
+
+
+  </div>
+</div>
+<div class="tags">
+  
+  <div class="examples">
+    <h4 class="tag_title">Examples:</h4>
+    
+      
+      <pre class="example code"><code><span class='id identifier rubyid_parse_assault'>parse_assault</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>You rotate your wrists, your gleaming steel baselard and gleaming steel baselard executing a casual spin to establish your flow as you advance upon a niveous giant warg!</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span>
+<span class='comment'># =&gt; &quot;flurry&quot;</span></code></pre>
+    
+  </div>
+<p class="tag_title">Parameters:</p>
+<ul class="param">
+  
+    <li>
+      
+        <span class='name'>line</span>
+      
+      
+        <span class='type'>(<tt>String</tt>)</span>
+      
+      
+      
+        &mdash;
+        <div class='inline'>
+<p>the line containing the assault information.</p>
+</div>
+      
+    </li>
+  
+</ul>
+
+<p class="tag_title">Returns:</p>
+<ul class="return">
+  
+    <li>
+      
+      
+        <span class='type'>(<tt>String</tt>, <tt>nil</tt>)</span>
+      
+      
+      
+        &mdash;
+        <div class='inline'>
+<p>the assault type if a match is found, otherwise nil.</p>
+</div>
+      
+    </li>
+  
+</ul>
+
+</div><table class="source_code">
+  <tr>
+    <td>
+      <pre class="lines">
+
+
+326
+327
+328
+329</pre>
+    </td>
+    <td>
+      <pre class="code"><span class="info file"># File 'combattracker_parser.rb', line 326</span>
+
+<span class='kw'>def</span> <span class='id identifier rubyid_parse_sequence_start'>parse_sequence_start</span><span class='lparen'>(</span><span class='id identifier rubyid_line'>line</span><span class='rparen'>)</span>
+  <span class='kw'>return</span> <span class='kw'>unless</span> <span class='const'><span class='object_link'><a href="#SEQUENCE_START_DETECTOR-constant" title="CombatTracker::Parser::SEQUENCE_START_DETECTOR (constant)">SEQUENCE_START_DETECTOR</a></span></span><span class='period'>.</span><span class='id identifier rubyid_match?'>match?</span><span class='lparen'>(</span><span class='id identifier rubyid_line'>line</span><span class='rparen'>)</span>
+  <span class='const'><span class='object_link'><a href="#SEQUENCE_START_LOOKUP-constant" title="CombatTracker::Parser::SEQUENCE_START_LOOKUP (constant)">SEQUENCE_START_LOOKUP</a></span></span><span class='period'>.</span><span class='id identifier rubyid_each'>each</span> <span class='lbrace'>{</span> <span class='op'>|</span><span class='id identifier rubyid_rx'>rx</span><span class='comma'>,</span> <span class='id identifier rubyid_type'>type</span><span class='op'>|</span> <span class='kw'>return</span> <span class='id identifier rubyid_type'>type</span> <span class='kw'>if</span> <span class='id identifier rubyid_rx'>rx</span><span class='period'>.</span><span class='id identifier rubyid_match?'>match?</span><span class='lparen'>(</span><span class='id identifier rubyid_line'>line</span><span class='rparen'>)</span> <span class='rbrace'>}</span>
 <span class='kw'>end</span></pre>
     </td>
   </tr>
@@ -1290,13 +1509,13 @@
       <pre class="lines">
 
 
-358
-359
-360
-361</pre>
+422
+423
+424
+425</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/combattracker_parser.rb', line 358</span>
+      <pre class="code"><span class="info file"># File 'combattracker_parser.rb', line 422</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_parse_status'>parse_status</span><span class='lparen'>(</span><span class='id identifier rubyid_line'>line</span><span class='rparen'>)</span>
   <span class='kw'>return</span> <span class='kw'>unless</span> <span class='const'><span class='object_link'><a href="#STATUS_DETECTOR-constant" title="CombatTracker::Parser::STATUS_DETECTOR (constant)">STATUS_DETECTOR</a></span></span><span class='period'>.</span><span class='id identifier rubyid_match?'>match?</span><span class='lparen'>(</span><span class='id identifier rubyid_line'>line</span><span class='rparen'>)</span>
@@ -1312,7 +1531,7 @@
 </div>
 
       <div id="footer">
-  Generated on Mon May 19 03:42:30 2025 by
+  Generated on Thu May 22 10:15:09 2025 by
   <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
   0.9.37 (ruby-3.3.4).
 </div>

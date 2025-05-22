@@ -4,7 +4,7 @@
     <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>
-  Class: CombatTracker::Parser::AttackDef
+  Class: CombatTracker::Parser::SequenceDef
   
     &mdash; Documentation by YARD 0.9.37
   
@@ -15,7 +15,7 @@
   <link rel="stylesheet" href="../../css/common.css" type="text/css" />
 
 <script type="text/javascript">
-  pathId = "CombatTracker::Parser::AttackDef";
+  pathId = "CombatTracker::Parser::SequenceDef";
   relpath = '../../';
 </script>
 
@@ -36,10 +36,10 @@
       <div id="header">
         <div id="menu">
   
-    <a href="../../_index.html">Index (A)</a> &raquo;
+    <a href="../../_index.html">Index (S)</a> &raquo;
     <span class='title'><span class='object_link'><a href="../../CombatTracker.html" title="CombatTracker (module)">CombatTracker</a></span></span> &raquo; <span class='title'><span class='object_link'><a href="../Parser.html" title="CombatTracker::Parser (module)">Parser</a></span></span>
      &raquo; 
-    <span class="title">AttackDef</span>
+    <span class="title">SequenceDef</span>
   
 </div>
 
@@ -59,7 +59,7 @@
         <div class="clear"></div>
       </div>
 
-      <div id="content"><h1>Class: CombatTracker::Parser::AttackDef
+      <div id="content"><h1>Class: CombatTracker::Parser::SequenceDef
   
   
   
@@ -76,7 +76,7 @@
           
             <li class="next">Struct</li>
           
-            <li class="next">CombatTracker::Parser::AttackDef</li>
+            <li class="next">CombatTracker::Parser::SequenceDef</li>
           
         </ul>
         <a href="#" class="inheritanceTree">show all</a>
@@ -101,7 +101,18 @@
   
 </div>
 
+<h2>Overview</h2><div class="docstring">
+  <div class="discussion">
+    
+<p>—- definitions ————————————————— Struct definitions for various combat-related entities.</p>
 
+
+  </div>
+</div>
+<div class="tags">
+  
+
+</div>
 
 
 
@@ -111,7 +122,7 @@
       <li class="public ">
   <span class="summary_signature">
     
-      <a href="#aoe-instance_method" title="#aoe (instance method)">#<strong>aoe</strong>  &#x21d2; Object </a>
+      <a href="#end_patterns-instance_method" title="#end_patterns (instance method)">#<strong>end_patterns</strong>  &#x21d2; Object </a>
     
 
     
@@ -129,34 +140,7 @@
 
   
     <span class="summary_desc"><div class='inline'>
-<p>Returns the value of attribute aoe.</p>
-</div></span>
-  
-</li>
-
-    
-      <li class="public ">
-  <span class="summary_signature">
-    
-      <a href="#damaging-instance_method" title="#damaging (instance method)">#<strong>damaging</strong>  &#x21d2; Object </a>
-    
-
-    
-  </span>
-  
-  
-  
-    
-    
-  
-  
-  
-  
-  
-
-  
-    <span class="summary_desc"><div class='inline'>
-<p>Returns the value of attribute damaging.</p>
+<p>Returns the value of attribute end_patterns.</p>
 </div></span>
   
 </li>
@@ -192,7 +176,7 @@
       <li class="public ">
   <span class="summary_signature">
     
-      <a href="#patterns-instance_method" title="#patterns (instance method)">#<strong>patterns</strong>  &#x21d2; Object </a>
+      <a href="#start_patterns-instance_method" title="#start_patterns (instance method)">#<strong>start_patterns</strong>  &#x21d2; Object </a>
     
 
     
@@ -210,34 +194,7 @@
 
   
     <span class="summary_desc"><div class='inline'>
-<p>Returns the value of attribute patterns.</p>
-</div></span>
-  
-</li>
-
-    
-      <li class="public ">
-  <span class="summary_signature">
-    
-      <a href="#spell-instance_method" title="#spell (instance method)">#<strong>spell</strong>  &#x21d2; Object </a>
-    
-
-    
-  </span>
-  
-  
-  
-    
-    
-  
-  
-  
-  
-  
-
-  
-    <span class="summary_desc"><div class='inline'>
-<p>Returns the value of attribute spell.</p>
+<p>Returns the value of attribute start_patterns.</p>
 </div></span>
   
 </li>
@@ -254,11 +211,11 @@
     <h2>Instance Attribute Details</h2>
     
       
-      <span id="aoe=-instance_method"></span>
+      <span id="end_patterns=-instance_method"></span>
       <div class="method_details first">
-  <h3 class="signature first" id="aoe-instance_method">
+  <h3 class="signature first" id="end_patterns-instance_method">
   
-    #<strong>aoe</strong>  &#x21d2; <tt>Object</tt> 
+    #<strong>end_patterns</strong>  &#x21d2; <tt>Object</tt> 
   
 
   
@@ -267,7 +224,7 @@
 </h3><div class="docstring">
   <div class="discussion">
     
-<p>Returns the value of attribute aoe</p>
+<p>Returns the value of attribute end_patterns</p>
 
 
   </div>
@@ -286,7 +243,7 @@
       
         &mdash;
         <div class='inline'>
-<p>the current value of aoe</p>
+<p>the current value of end_patterns</p>
 </div>
       
     </li>
@@ -299,76 +256,15 @@
       <pre class="lines">
 
 
+35
 36
-37
-38</pre>
+37</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'combattracker_parser.rb', line 36</span>
+      <pre class="code"><span class="info file"># File 'combattracker_parser.rb', line 35</span>
 
-<span class='kw'>def</span> <span class='id identifier rubyid_aoe'>aoe</span>
-  <span class='ivar'>@aoe</span>
-<span class='kw'>end</span></pre>
-    </td>
-  </tr>
-</table>
-</div>
-    
-      
-      <span id="damaging=-instance_method"></span>
-      <div class="method_details ">
-  <h3 class="signature " id="damaging-instance_method">
-  
-    #<strong>damaging</strong>  &#x21d2; <tt>Object</tt> 
-  
-
-  
-
-  
-</h3><div class="docstring">
-  <div class="discussion">
-    
-<p>Returns the value of attribute damaging</p>
-
-
-  </div>
-</div>
-<div class="tags">
-  
-<p class="tag_title">Returns:</p>
-<ul class="return">
-  
-    <li>
-      
-      
-        <span class='type'>(<tt>Object</tt>)</span>
-      
-      
-      
-        &mdash;
-        <div class='inline'>
-<p>the current value of damaging</p>
-</div>
-      
-    </li>
-  
-</ul>
-
-</div><table class="source_code">
-  <tr>
-    <td>
-      <pre class="lines">
-
-
-36
-37
-38</pre>
-    </td>
-    <td>
-      <pre class="code"><span class="info file"># File 'combattracker_parser.rb', line 36</span>
-
-<span class='kw'>def</span> <span class='id identifier rubyid_damaging'>damaging</span>
-  <span class='ivar'>@damaging</span>
+<span class='kw'>def</span> <span class='id identifier rubyid_end_patterns'>end_patterns</span>
+  <span class='ivar'>@end_patterns</span>
 <span class='kw'>end</span></pre>
     </td>
   </tr>
@@ -421,12 +317,12 @@
       <pre class="lines">
 
 
+35
 36
-37
-38</pre>
+37</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'combattracker_parser.rb', line 36</span>
+      <pre class="code"><span class="info file"># File 'combattracker_parser.rb', line 35</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_name'>name</span>
   <span class='ivar'>@name</span>
@@ -437,11 +333,11 @@
 </div>
     
       
-      <span id="patterns=-instance_method"></span>
+      <span id="start_patterns=-instance_method"></span>
       <div class="method_details ">
-  <h3 class="signature " id="patterns-instance_method">
+  <h3 class="signature " id="start_patterns-instance_method">
   
-    #<strong>patterns</strong>  &#x21d2; <tt>Object</tt> 
+    #<strong>start_patterns</strong>  &#x21d2; <tt>Object</tt> 
   
 
   
@@ -450,7 +346,7 @@
 </h3><div class="docstring">
   <div class="discussion">
     
-<p>Returns the value of attribute patterns</p>
+<p>Returns the value of attribute start_patterns</p>
 
 
   </div>
@@ -469,7 +365,7 @@
       
         &mdash;
         <div class='inline'>
-<p>the current value of patterns</p>
+<p>the current value of start_patterns</p>
 </div>
       
     </li>
@@ -482,76 +378,15 @@
       <pre class="lines">
 
 
+35
 36
-37
-38</pre>
+37</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'combattracker_parser.rb', line 36</span>
+      <pre class="code"><span class="info file"># File 'combattracker_parser.rb', line 35</span>
 
-<span class='kw'>def</span> <span class='id identifier rubyid_patterns'>patterns</span>
-  <span class='ivar'>@patterns</span>
-<span class='kw'>end</span></pre>
-    </td>
-  </tr>
-</table>
-</div>
-    
-      
-      <span id="spell=-instance_method"></span>
-      <div class="method_details ">
-  <h3 class="signature " id="spell-instance_method">
-  
-    #<strong>spell</strong>  &#x21d2; <tt>Object</tt> 
-  
-
-  
-
-  
-</h3><div class="docstring">
-  <div class="discussion">
-    
-<p>Returns the value of attribute spell</p>
-
-
-  </div>
-</div>
-<div class="tags">
-  
-<p class="tag_title">Returns:</p>
-<ul class="return">
-  
-    <li>
-      
-      
-        <span class='type'>(<tt>Object</tt>)</span>
-      
-      
-      
-        &mdash;
-        <div class='inline'>
-<p>the current value of spell</p>
-</div>
-      
-    </li>
-  
-</ul>
-
-</div><table class="source_code">
-  <tr>
-    <td>
-      <pre class="lines">
-
-
-36
-37
-38</pre>
-    </td>
-    <td>
-      <pre class="code"><span class="info file"># File 'combattracker_parser.rb', line 36</span>
-
-<span class='kw'>def</span> <span class='id identifier rubyid_spell'>spell</span>
-  <span class='ivar'>@spell</span>
+<span class='kw'>def</span> <span class='id identifier rubyid_start_patterns'>start_patterns</span>
+  <span class='ivar'>@start_patterns</span>
 <span class='kw'>end</span></pre>
     </td>
   </tr>
