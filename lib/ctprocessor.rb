@@ -232,8 +232,8 @@ module CombatTracker
           damage_component[:critical_type]  = Lookup.id(:critical_types, crit[:type])
           damage_component[:critical_rank]  = crit[:rank]
           damage_component[:is_fatal]       = crit[:fatal]
-          Creature[ev[:target][:id]].append_injury(crit[:location], crit[:wound_rank]) if crit[:wound_rank] && crit[:wound_rank] > 0
-          puts "Appending injury to Creature: #{ev[:target][:id]} - #{crit[:location]} (#{crit[:wound_rank]}) - attack_id #{attack_id}" if crit[:wound_rank] && crit[:wound_rank] > 0
+          # Creature[ev[:target][:id]].append_injury(crit[:location], crit[:wound_rank]) if crit[:wound_rank] && crit[:wound_rank] > 0
+          # puts "Appending injury to Creature: #{ev[:target][:id]} - #{crit[:location]} (#{crit[:wound_rank]}) - attack_id #{attack_id}" if crit[:wound_rank] && crit[:wound_rank] > 0
         else
           if outcome_id == 1 && (ev[:name] != :natures_fury)
             Log.log(:WARN, "CRIT", "No crit message detected for attack #{ev[:name]} (#{attack_id}).")
@@ -340,8 +340,8 @@ module CombatTracker
             dc_row[:critical_type] = Lookup.id(:critical_types, crit[:type])
             dc_row[:critical_rank] = crit[:rank]
             dc_row[:is_fatal]      = crit[:fatal]
-            Creature[exist_id].append_injury(crit[:location], crit[:wound_rank]) if crit[:wound_rank] && crit[:wound_rank] > 0
-            puts "Appending injury to Creature: #{exist_id} - #{crit[:location]} (#{crit[:wound_rank]}) - flare_id #{flare_event_id}" if crit[:wound_rank] && crit[:wound_rank] > 0
+            # Creature[exist_id].append_injury(crit[:location], crit[:wound_rank]) if crit[:wound_rank] && crit[:wound_rank] > 0
+            # puts "Appending injury to Creature: #{exist_id} - #{crit[:location]} (#{crit[:wound_rank]}) - flare_id #{flare_event_id}" if crit[:wound_rank] && crit[:wound_rank] > 0
           end
 
           CombatTracker::DebugInsert.insert(:damage_components, dc_row)
