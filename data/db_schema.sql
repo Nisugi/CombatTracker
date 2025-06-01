@@ -68,7 +68,7 @@ CREATE TABLE defense_types (
 );
 
 INSERT OR IGNORE INTO resolution_types (id, name) VALUES
-  (1, 'AS_DS'), (2, 'CS_TD'), (3, 'SMR'), (4, 'SSR'), (5, 'MMR');
+  (1, 'AS_DS'), (2, 'CS_TD'), (3, 'UAF_UDF'), (4, 'SMR'), (5, 'SSR'), (6, 'MMR') ;
 
 INSERT OR IGNORE INTO locations (id, name) VALUES
   (1, 'ABDOMEN'),
@@ -217,6 +217,7 @@ end;
 -- 2‑g  Damage components
 CREATE TABLE damage_components (
     id            INTEGER PRIMARY KEY,
+    creature_instance_id INTEGER,
     attack_id     INTEGER REFERENCES attack_events(id) ON DELETE CASCADE,
     flare_id      INTEGER REFERENCES flare_events(id),
     location_id   INTEGER REFERENCES locations(id),

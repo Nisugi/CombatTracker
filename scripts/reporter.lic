@@ -227,7 +227,7 @@ module CombatTracker
       respond Lich::Messaging.mono(msg)
     end
 
-        # Generates a report for a specific sequence type and index.
+    # Generates a report for a specific sequence type and index.
     #
     # @param seq_type [String, nil] The type of sequence to report on. If nil, usage information is displayed.
     # @param idx [Integer, nil] The index of the sequence to report on. If nil, the last sequence is reported.
@@ -536,6 +536,87 @@ module CombatTracker
         Log.log(:ERROR, "REPORT", "Error backtrace: #{e.backtrace.join("\n")}")
         return { error: e.message }
       end
+    end
+
+    # ------------------------------------------------------------------
+    #  Estimates a creature's hit-points by summing every damage component
+    #  recorded against that creature instance (attacks + flares).
+    #
+    #  Usage examples
+    #     hp_report                 # every creature in the DB
+    #     hp_report(123)            # restrict to session 123
+    # ------------------------------------------------------------------
+    def self.hp_report(session_id = nil)
+      ds = DB.conn[:creature_instances]
+      ds = ds.where(session_id: session_id.to_i) if session_id
+
+      creatures = ds.order(:first_seen_at).all
+      if creatures.empty?
+        msg = session_id ? "No creatures found for session ##{session_id}." :
+                           "No creature instances recorded."
+        return respond msg
+      end
+
+      rows = []
+
+      creatures.each do |ci|
+        # -- collect all attack-ids for this instance --------------------------------
+        atk_ids = DB.conn[:attack_events]
+                    .where(creature_instance_id: ci[:id])
+                    .select_map(:id)
+
+        next if atk_ids.empty?
+
+        # -- damage_components directly on those attacks -----------------------------
+        direct = DB.conn[:damage_components]
+                   .where(attack_id: atk_ids)
+                   .exclude(damage: nil)
+                   .select(:id, :damage)
+                   .all
+
+        # -- plus damage_components on any flares chained to those attacks ----------
+        flare_ids = DB.conn[:flare_events]
+                      .where(attack_id: atk_ids)
+                      .select_map(:id)
+
+        flare   = if flare_ids.empty?
+                    []
+                  else
+                    DB.conn[:damage_components]
+                      .where(flare_id: flare_ids)
+                      .exclude(damage: nil)
+                      .select(:id, :damage)
+                      .all
+                  end
+
+        dmgs = (direct + flare)
+                 .sort_by { |row| row[:id] }   # chronological by DC id
+                 .map { |row| row[:damage].to_i }
+
+        next if dmgs.empty?
+
+        rows << [
+          Lich::Messaging.make_cmd_link(
+            ci[:exist_id].to_s,
+            ";eq CombatTracker::Reporter.creature_report(#{ci[:exist_id]})"
+          ),
+          ci[:display_name],
+          dmgs.sum,
+          dmgs.join(' ')
+        ]
+      end
+
+      if rows.empty?
+        msg = session_id ? "No damage recorded for session ##{session_id}." :
+                           "No damage data available."
+        return respond msg
+      end
+
+      header = "Creature HP Estimates" +
+               (session_id ? " – Session ##{session_id}" : "")
+      print_ascii_table(header,
+                        %w[ID Creature Total\ DMG Damages],
+                        rows)
     end
 
     private
